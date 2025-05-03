@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小狗积分系统 🐾</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #ff7eb9;
+            --secondary: #7afcff;
+            --bg: #fff0f5;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg);
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        .score {
+            font-size: 2.5em;
+            text-align: center;
+            margin: 20px 0;
+            color: var(--primary);
+        }
+
+        .accordion {
+            margin: 10px 0;
+            cursor: pointer;
+            padding: 12px;
+            border-radius: 8px;
+            background: #f8f8f8;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .accordion:hover {
+            background: #f0f0f0;
+        }
+
+        .panel {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.2s ease-out;
+        }
+
+        .btn-group {
+            display: grid;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn {
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .deduct-btn { background: #ffe6e6; color: #ff4444; }
+        .add-btn { background: #e6ffe6; color: #44cc44; }
+        .store-btn { background: #e6f3ff; color: #4488ff; }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+        }
+
+        .log {
+            font-size: 0.9em;
+            color: #666;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .badge {
+            background: var(--primary);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 0.8em;
+        }
+        .note {
+            font-size: 0.8em;
+            color: #666;
+            margin-top: 10px;
+            padding: 8px;
+            background: #f8f8f8;
+            border-radius: 6px;
+        }
+    </style>
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
+        // TODO: Add SDKs for Firebase products that you want to use
+        // https://firebase.google.com/docs/web/setup#available-libraries
+    
+        // Your web app's Firebase configuration
+        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+        const firebaseConfig = {
+        apiKey: "AIzaSyAWIdKwbQBX5-GTfMwb_El4991OXK-_Bfw",
+        authDomain: "puppy-5443b.firebaseapp.com",
+        projectId: "puppy-5443b",
+        storageBucket: "puppy-5443b.firebasestorage.app",
+        messagingSenderId: "548254394160",
+        appId: "1:548254394160:web:268692ff52ecf641adcaf5",
+        measurementId: "G-T0X1YL9RXX"
+        };
+    
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+    </script>
+    <script>
+        // 直接在HTML中定义togglePanel函数
+        function togglePanel(id) {
+            const panel = document.getElementById(id);
+            const icon = panel.previousElementSibling.querySelector('i');
+            panel.style.maxHeight = panel.style.maxHeight ? null : panel.scrollHeight + "px";
+            icon.classList.toggle('fa-chevron-up');
+        }
+    </script>
+</head>
+<body>
+    <h1 style="text-align: center; color: var(--primary);">🐾 小狗积分系统 🦴</h1>
+    
+    <div class="score" id="totalScore">当前积分：0</div>
+
+    <div class="dashboard">
+        <div class="card">
+            <div class="accordion" onclick="window.togglePanel('deductPanel')">
+                <h2>📉 扣分项目</h2>
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div id="deductPanel" class="panel">
+                <div class="btn-group" id="deductions"></div>
+                <div class="note">
+                    惩罚包括：罚抄、挨打、主人不理！<br>
+                    扣分有误可申诉，经主人认定返还并奖励！
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="accordion" onclick="window.togglePanel('addPanel')">
+                <h2>📈 加分项目</h2>
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div id="addPanel" class="panel">
+                <div class="btn-group" id="additions"></div>
+                <div class="note">
+                    奖励包括：商店项目、小狗其他要求<br>
+                    小狗可以随时申请添加！
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="accordion" onclick="window.togglePanel('storePanel')">
+                <h2>🛍️ 积分商店</h2>
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div id="storePanel" class="panel">
+                <div class="btn-group" id="store"></div>
+                <div class="note">待添加。。。。。。</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>📝 今日记录</h2>
+        <div class="log" id="log"></div>
+    </div>
+
+    <div class="note" style="margin: 20px auto 0; text-align: center; max-width: 600px;">
+        注：最终解释权在主人
+    </div>
+
+    <!-- 在 body 结束标签前添加 -->
+    <script type="module" src="script.js"></script>
+</body>
+</html>
