@@ -20,10 +20,16 @@ const firebaseConfig = {
 // --- 修改开始 ---
 // 检查是否已存在 Firebase 应用，如果不存在则初始化
 let app;
-if (getApps().length === 0) {
-  app = initializeApp(firebaseConfig);
-} else {
-  app = getApp(); // 获取已存在的默认应用
+try {
+  if (getApps().length === 0) {
+    app = initializeApp(firebaseConfig);
+    console.log("Firebase 应用初始化成功");
+  } else {
+    app = getApp(); // 获取已存在的默认应用
+    console.log("获取已存在的 Firebase 应用");
+  }
+} catch (error) {
+  console.error("Firebase 初始化错误:", error);
 }
 // --- 修改结束 ---
 
@@ -34,46 +40,54 @@ const database = getDatabase(app); // 确保使用获取到的 app 实例
 function loadScore() {
   console.log("正在从 Firebase 加载数据...");
   
-  const scoreRef = ref(database, 'lele/score');  // 修改路径，使用唯一标识符
-  onValue(scoreRef, (snapshot) => {
-    const val = snapshot.val();
-    console.log("加载到积分:", val);
-    score = val || 0;
-    updateDisplay();
-  }, (error) => {
-    console.error("读取积分时出错:", error);
-  });
-  
-  const logRef = ref(database, 'lele/log');  // 修改路径，使用唯一标识符
-  onValue(logRef, (snapshot) => {
-    const val = snapshot.val();
-    console.log("加载到日志:", val);
-    log = val || [];
-    updateDisplay();
-  }, (error) => {
-    console.error("读取日志时出错:", error);
-  });
+  try {
+    const scoreRef = ref(database, 'lele/score');  // 修改路径，使用唯一标识符
+    onValue(scoreRef, (snapshot) => {
+      const val = snapshot.val();
+      console.log("加载到积分:", val);
+      score = val || 0;
+      updateDisplay();
+    }, (error) => {
+      console.error("读取积分时出错:", error);
+    });
+    
+    const logRef = ref(database, 'lele/log');  // 修改路径，使用唯一标识符
+    onValue(logRef, (snapshot) => {
+      const val = snapshot.val();
+      console.log("加载到日志:", val);
+      log = val || [];
+      updateDisplay();
+    }, (error) => {
+      console.error("读取日志时出错:", error);
+    });
+  } catch (error) {
+    console.error("加载数据时发生错误:", error);
+  }
 }
 
 // 保存积分到 Firebase
 function saveScore() {
   console.log("正在保存数据到 Firebase...");
   
-  set(ref(database, 'lele/score'), score)  // 修改路径，使用唯一标识符
-    .then(() => {
-      console.log("积分保存成功!");
-    })
-    .catch((error) => {
-      console.error("保存积分时出错:", error);
-    });
-    
-  set(ref(database, 'lele/log'), log)  // 修改路径，使用唯一标识符
-    .then(() => {
-      console.log("日志保存成功!");
-    })
-    .catch((error) => {
-      console.error("保存日志时出错:", error);
-    });
+  try {
+    set(ref(database, 'lele/score'), score)  // 修改路径，使用唯一标识符
+      .then(() => {
+        console.log("积分保存成功!");
+      })
+      .catch((error) => {
+        console.error("保存积分时出错:", error);
+      });
+      
+    set(ref(database, 'lele/log'), log)  // 修改路径，使用唯一标识符
+      .then(() => {
+        console.log("日志保存成功!");
+      })
+      .catch((error) => {
+        console.error("保存日志时出错:", error);
+      });
+  } catch (error) {
+    console.error("保存数据时发生错误:", error);
+  }
 }
 
 // 更新显示
