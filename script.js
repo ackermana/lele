@@ -49,6 +49,8 @@ function loadScore() {
       updateDisplay();
     }, (error) => {
       console.error("读取积分时出错:", error);
+      // 添加错误处理，显示错误信息
+      document.getElementById('totalScore').textContent = `当前积分：${score} (加载失败)`;
     });
     
     const logRef = ref(database, 'lele/log');  // 修改路径，使用唯一标识符
@@ -59,6 +61,8 @@ function loadScore() {
       updateDisplay();
     }, (error) => {
       console.error("读取日志时出错:", error);
+      // 添加错误处理
+      document.getElementById('log').innerHTML = '<div style="color:red">日志加载失败</div>';
     });
   } catch (error) {
     console.error("加载数据时发生错误:", error);
@@ -70,12 +74,39 @@ function saveScore() {
   console.log("正在保存数据到 Firebase...");
   
   try {
+    // 添加状态指示
+    const statusElem = document.createElement('div');
+    statusElem.id = 'saveStatus';
+    statusElem.style.position = 'fixed';
+    statusElem.style.bottom = '10px';
+    statusElem.style.right = '10px';
+    statusElem.style.padding = '5px 10px';
+    statusElem.style.background = '#ffe6e6';
+    statusElem.style.borderRadius = '5px';
+    statusElem.style.fontSize = '12px';
+    statusElem.textContent = '正在保存...';
+    document.body.appendChild(statusElem);
+    
     set(ref(database, 'lele/score'), score)  // 修改路径，使用唯一标识符
       .then(() => {
         console.log("积分保存成功!");
+        statusElem.style.background = '#e6ffe6';
+        statusElem.textContent = '保存成功!';
+        setTimeout(() => {
+          if (document.body.contains(statusElem)) {
+            document.body.removeChild(statusElem);
+          }
+        }, 2000);
       })
       .catch((error) => {
         console.error("保存积分时出错:", error);
+        statusElem.style.background = '#ffe6e6';
+        statusElem.textContent = '保存失败!';
+        setTimeout(() => {
+          if (document.body.contains(statusElem)) {
+            document.body.removeChild(statusElem);
+          }
+        }, 2000);
       });
       
     set(ref(database, 'lele/log'), log)  // 修改路径，使用唯一标识符
@@ -192,7 +223,7 @@ window.onload = function() {
 
   // 加载 Firebase 数据
   loadScore();
-  
+
   // 添加调试信息
   console.log("页面初始化完成，已尝试加载数据");
 };

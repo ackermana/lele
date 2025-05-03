@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>小狗积分系统 🐾</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- 添加Firebase规则 -->
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
     <style>
         :root {
             --primary: #ff7eb9;
@@ -111,7 +113,8 @@
             border-radius: 6px;
         }
     </style>
-    <script type="module">
+    <!-- 移除这个脚本，因为我们已经在script.js中导入了Firebase -->
+    <!-- <script type="module">
         // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
@@ -133,7 +136,7 @@
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const analytics = getAnalytics(app);
-    </script>
+    </script> -->
     <script>
         // 直接在HTML中定义togglePanel函数
         function togglePanel(id) {
@@ -201,5 +204,10 @@
 
     <!-- 在 body 结束标签前添加 -->
     <script type="module" src="script.js"></script>
+    
+    <!-- 添加Firebase控制台链接 -->
+    <div class="note" style="margin: 10px auto 0; text-align: center; max-width: 600px; font-size: 0.7em;">
+        <a href="https://console.firebase.google.com/project/puppy-5443b/database/puppy-5443b-default-rtdb/data" target="_blank">Firebase数据库</a>
+    </div>
 </body>
 </html>
