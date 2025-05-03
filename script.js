@@ -32,23 +32,48 @@ const database = getDatabase(app); // 确保使用获取到的 app 实例
 
 // 从 Firebase 读取积分
 function loadScore() {
-  const scoreRef = ref(database, 'score');
+  console.log("正在从 Firebase 加载数据...");
+  
+  const scoreRef = ref(database, 'lele/score');  // 修改路径，使用唯一标识符
   onValue(scoreRef, (snapshot) => {
-    score = snapshot.val() || 0;
+    const val = snapshot.val();
+    console.log("加载到积分:", val);
+    score = val || 0;
     updateDisplay();
+  }, (error) => {
+    console.error("读取积分时出错:", error);
   });
   
-  const logRef = ref(database, 'log');
+  const logRef = ref(database, 'lele/log');  // 修改路径，使用唯一标识符
   onValue(logRef, (snapshot) => {
-    log = snapshot.val() || [];
+    const val = snapshot.val();
+    console.log("加载到日志:", val);
+    log = val || [];
     updateDisplay();
+  }, (error) => {
+    console.error("读取日志时出错:", error);
   });
 }
 
 // 保存积分到 Firebase
 function saveScore() {
-  set(ref(database, 'score'), score);
-  set(ref(database, 'log'), log);
+  console.log("正在保存数据到 Firebase...");
+  
+  set(ref(database, 'lele/score'), score)  // 修改路径，使用唯一标识符
+    .then(() => {
+      console.log("积分保存成功!");
+    })
+    .catch((error) => {
+      console.error("保存积分时出错:", error);
+    });
+    
+  set(ref(database, 'lele/log'), log)  // 修改路径，使用唯一标识符
+    .then(() => {
+      console.log("日志保存成功!");
+    })
+    .catch((error) => {
+      console.error("保存日志时出错:", error);
+    });
 }
 
 // 更新显示
@@ -153,4 +178,7 @@ window.onload = function() {
 
   // 加载 Firebase 数据
   loadScore();
+  
+  // 添加调试信息
+  console.log("页面初始化完成，已尝试加载数据");
 };
