@@ -11,7 +11,7 @@
         :root {
             --primary: #ff7eb9;
             --secondary: #7afcff;
-            --bg: #fff0f5;
+            --bg: linear-gradient(to right, #fff0f5, #f0f8ff);
         }
 
         body {
@@ -20,6 +20,7 @@
             padding: 20px;
             max-width: 800px;
             margin: 0 auto;
+            transition: background 0.5s;
         }
 
         .dashboard {
@@ -34,6 +35,18 @@
             border-radius: 15px;
             padding: 20px;
             box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+            background: var(--secondary);
         }
 
         .score {
@@ -75,15 +88,25 @@
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            transition: 0.3s;
+            transition: all 0.3s;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            font-weight: 500;
         }
-
-        .deduct-btn { background: #ffe6e6; color: #ff4444; }
-        .add-btn { background: #e6ffe6; color: #44cc44; }
-        .store-btn { background: #e6f3ff; color: #4488ff; }
+        
+        .deduct-btn { 
+            background: linear-gradient(to right, #ffe6e6, #ffd6d6); 
+            color: #ff4444; 
+        }
+        .add-btn { 
+            background: linear-gradient(to right, #e6ffe6, #d6ffd6); 
+            color: #44cc44; 
+        }
+        .store-btn { 
+            background: linear-gradient(to right, #e6f3ff, #d6e3ff); 
+            color: #4488ff; 
+        }
 
         .btn:hover {
             transform: translateY(-2px);
@@ -150,7 +173,11 @@
 <body>
     <h1 style="text-align: center; color: var(--primary);">🐾 小狗积分系统 🦴</h1>
     
-    <div class="score" id="totalScore">当前积分：0</div>
+    <div style="text-align: center; margin-bottom: 10px; font-size: 1.2em; color: var(--primary);">
+        主人 小郝  ❤  乐乐 小狗
+    </div>
+
+    <div class="score" id="totalScore" style="font-weight: bold;">当前积分：${score}</div>
 
     <div class="dashboard">
         <div class="card">
@@ -202,9 +229,10 @@
         注：最终解释权在主人
     </div>
     
-    <!-- 添加已陪伴天数显示 -->
-    <div class="note" style="margin: 10px auto 0; text-align: center; max-width: 600px;">
-        已陪伴：<span id="accompanyDays">51</span> 天
+    <!-- 修改已陪伴天数显示为实时计时器 -->
+    <div id="accompanyDaysContainer" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: white; padding: 10px 20px; border-radius: 20px; box-shadow: 0 3px 10px rgba(0,0,0,0.1); z-index: 100; font-size: 0.9em; display: flex; align-items: center;">
+        <i class="fas fa-heart" style="color: var(--primary); margin-right: 8px;"></i>
+        <span id="accompanyDays">0天 00:00:00</span>
     </div>
 
     <!-- 添加可爱小狗 -->
@@ -262,5 +290,6 @@
             border-color: white transparent;
         }
     </style>
+    <div id="theme-switcher" style="text-align: center; margin-bottom: 20px;"></div>
 </body>
 </html>
