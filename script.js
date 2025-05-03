@@ -5,6 +5,7 @@ import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebase
 // 全局变量
 let score = 0;
 let log = [];
+let accompanyDays = 51; // 初始天数设置为51天
 
 const firebaseConfig = {
   apiKey: "AIzaSyAWIdKwbQBX5-GTfMwb_El4991OXK-_Bfw",
@@ -36,6 +37,21 @@ try {
 // 现在 getDatabase 函数已经被导入，可以正常使用了
 const database = getDatabase(app); // 确保使用获取到的 app 实例
 
+// 保存天数到 Firebase
+function saveDays() {
+  try {
+    set(ref(database, 'lele/accompanyDays'), accompanyDays)
+      .then(() => {
+        console.log("陪伴天数保存成功!");
+      })
+      .catch((error) => {
+        console.error("保存陪伴天数时出错:", error);
+      });
+  } catch (error) {
+    console.error("保存陪伴天数时发生错误:", error);
+  }
+}
+
 // 从 Firebase 读取积分
 function loadScore() {
   console.log("正在从 Firebase 加载数据...");
@@ -64,8 +80,59 @@ function loadScore() {
       // 添加错误处理
       document.getElementById('log').innerHTML = '<div style="color:red">日志加载失败</div>';
     });
+    
+    // 加载陪伴天数
+    const daysRef = ref(database, 'lele/accompanyDays');
+    onValue(daysRef, (snapshot) => {
+      const val = snapshot.val();
+      console.log("加载到陪伴天数:", val);
+      if (val) {
+        accompanyDays = val;
+      }
+      updateDaysDisplay();
+    }, (error) => {
+      console.error("读取陪伴天数时出错:", error);
+    });
   } catch (error) {
     console.error("加载数据时发生错误:", error);
+  }
+}
+
+// 更新天数显示
+function updateDaysDisplay() {
+  const daysElement = document.getElementById('accompanyDays');
+  if (daysElement) {
+    daysElement.textContent = accompanyDays;
+  }
+}
+
+// 检查并更新天数
+function checkAndUpdateDays() {
+  const now = new Date();
+  const lastUpdateKey = 'lastDayUpdate';
+  
+  // 获取上次更新的日期
+  const lastUpdate = localStorage.getItem(lastUpdateKey);
+  const today = now.toDateString();
+  
+  // 如果是新的一天（过了午夜）
+  if (lastUpdate !== today && now.getHours() >= 0) {
+    accompanyDays++;
+    localStorage.setItem(lastUpdateKey, today);
+    updateDaysDisplay();
+    saveDays();
+    
+    // 在小狗对话中添加一条关于天数的消息
+    const puppy = document.getElementById('cute-puppy');
+    const speechBubble = document.getElementById('puppy-speech-bubble');
+    if (puppy && speechBubble) {
+      speechBubble.textContent = `今天是我们在一起的第 ${accompanyDays} 天啦！`;
+      speechBubble.style.opacity = "1";
+      
+      setTimeout(() => {
+        speechBubble.style.opacity = "0";
+      }, 5000);
+    }
   }
 }
 
@@ -126,7 +193,7 @@ function updateDisplay() {
   document.getElementById('totalScore').textContent = `当前积分：${score}`;
   document.getElementById('log').innerHTML = log
     .slice(-10).reverse().map(entry => 
-      `<div>${new Date(entry.time).toLocaleTimeString()} - ${entry.action} 
+      `<div>${new Date(entry.time).toLocaleDateString()} ${new Date(entry.time).toLocaleTimeString()} - ${entry.action} 
       <span class="badge">${entry.points > 0 ? '+' : ''}${entry.points}</span></div>`
     ).join('');
 }
@@ -223,7 +290,89 @@ window.onload = function() {
 
   // 加载 Firebase 数据
   loadScore();
+  
+  // 初始化天数显示
+  updateDaysDisplay();
+  
+  // 检查并更新天数
+  checkAndUpdateDays();
+  
+  // 设置每小时检查一次是否过了午夜
+  setInterval(checkAndUpdateDays, 60 * 60 * 1000);
 
   // 添加调试信息
   console.log("页面初始化完成，已尝试加载数据");
+  
+  // 初始化小狗功能
+  initPuppy();
 };
+
+// 小狗功能初始化
+function initPuppy() {
+  const puppy = document.getElementById('cute-puppy');
+  const speechBubble = document.getElementById('puppy-speech-bubble');
+  const puppyImage = document.getElementById('puppy-image');
+  
+  // 小狗可能说的话
+  const puppyPhrases = [
+    "汪汪~我是小狗狗~",
+    "主人，我爱你哦~",
+    "摸摸我的头吧~",
+    "今天表现好，可以加分吗？",
+    "不要扣我分啦~",
+    "我会乖乖的~",
+    "主人最好了~",
+    "抱抱我~",
+    "我想要亲亲~",
+    "我会一直陪着主人~",
+    "主人，我饿了~",
+    "我可以兑换奖励吗？"
+  ];
+  
+  // 随机显示对话泡泡
+  function showRandomSpeech() {
+    const randomPhrase = puppyPhrases[Math.floor(Math.random() * puppyPhrases.length)];
+    speechBubble.textContent = randomPhrase;
+    speechBubble.style.opacity = "1";
+    
+    setTimeout(() => {
+      speechBubble.style.opacity = "0";
+    }, 3000);
+  }
+  
+  // 初始随机时间后显示第一句话
+  setTimeout(showRandomSpeech, Math.random() * 5000 + 2000);
+  
+  // 定期随机说话
+  setInterval(showRandomSpeech, Math.random() * 20000 + 15000);
+  
+  // 点击小狗时的交互
+  puppy.addEventListener('click', () => {
+    // 显示随机对话
+    showRandomSpeech();
+    
+    // 添加动画效果
+    puppyImage.style.transform = "scale(1.2)";
+    setTimeout(() => {
+      puppyImage.style.transform = "scale(1)";
+    }, 300);
+  });
+  
+  // 小狗随机移动
+  function randomMove() {
+    const maxX = 40; // 最大水平移动范围
+    const maxY = 20; // 最大垂直移动范围
+    
+    const randomX = Math.random() * maxX - maxX/2;
+    const randomY = Math.random() * maxY - maxY/2;
+    
+    puppy.style.transform = `translate(${randomX}px, ${randomY}px)`;
+    
+    setTimeout(() => {
+      puppy.style.transform = "translate(0, 0)";
+    }, 500);
+  }
+  
+  // 定期随机移动
+  setInterval(randomMove, Math.random() * 10000 + 5000);
+}
