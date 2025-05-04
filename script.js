@@ -362,7 +362,19 @@ const rules = {
     {name: "神秘礼物", cost: 300, desc: "每次兑换加100"}
   ]
 };
+// ... existing code ...
 
+// 添加togglePanel函数到window对象
+window.togglePanel = function(panelId) {
+  const panel = document.getElementById(panelId);
+  if (panel.style.maxHeight) {
+    panel.style.maxHeight = null;
+  } else {
+    panel.style.maxHeight = panel.scrollHeight + "px";
+  }
+};
+
+// ... existing code ...
 // 页面加载完成后初始化
 window.onload = function() {
   // 初始化所有按钮
