@@ -7,7 +7,6 @@ import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebase
 let score = 0; // 当前积分
 let log = []; // 操作日志
 let accompanyDays = 51; // 初始天数设置为51天
-let theme = localStorage.getItem('theme') || 'pink'; // 默认主题：粉色
 let speechBubble = null; // 用于存储对话气泡元素的引用
 let startDate = new Date('2025-03-14T12:00:00'); // 设置为2025年3月14日中午12点
 
@@ -106,6 +105,10 @@ function saveDays() {
 function loadScore() {
   console.log("正在从 Firebase 加载数据...");
   
+  // 添加加载状态指示
+  document.getElementById('totalScore').textContent = `当前积分：加载中...`;
+  document.getElementById('log').innerHTML = '<div style="text-align:center">加载中...</div>';
+  
   try {
     const scoreRef = ref(database, 'lele/score');  // 修改路径，使用唯一标识符
     onValue(scoreRef, (snapshot) => {
@@ -116,7 +119,8 @@ function loadScore() {
     }, (error) => {
       console.error("读取积分时出错:", error);
       // 添加错误处理，显示错误信息
-      document.getElementById('totalScore').textContent = `当前积分：${score} (加载失败)`;
+      document.getElementById('totalScore').textContent = `当前积分：${score} (加载失败，请刷新页面)`;
+      retryLoad();
     });
     
     const logRef = ref(database, 'lele/log');  // 修改路径，使用唯一标识符
@@ -145,6 +149,8 @@ function loadScore() {
     });
   } catch (error) {
     console.error("加载数据时发生错误:", error);
+    document.getElementById('totalScore').textContent = `当前积分：${score} (加载失败)`;
+    document.getElementById('log').innerHTML = '<div style="color:red">数据加载失败，请刷新页面重试</div>';
   }
 }
 
@@ -152,10 +158,7 @@ function loadScore() {
 function updateDaysDisplay() {
   const daysElement = document.getElementById('accompanyDays');
   if (daysElement) {
-    // 计算具体的时分秒
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - accompanyDays);
-    
+    // 使用全局定义的固定起始日期
     const now = new Date();
     const diffTime = Math.abs(now - startDate);
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
@@ -283,16 +286,7 @@ function updateDisplay() {
     ).join('');
 }
 
-// 移除这两个部分
-// function togglePanel(id) {
-//   const panel = document.getElementById(id);
-//   const icon = panel.previousElementSibling.querySelector('i');
-//   panel.style.maxHeight = panel.style.maxHeight ? null : panel.scrollHeight + "px";
-//   icon.classList.toggle('fa-chevron-up');
-// }
 
-// // 将函数暴露到全局作用域
-// window.togglePanel = togglePanel;
 
 function createButton(type, item) {
   const btn = document.createElement('button');
@@ -312,15 +306,17 @@ function createButton(type, item) {
         points = -item.cost;
         score += points;
         log.push({time: Date.now(), action: `兑换 ${item.name}`, points});
-        saveScore(); // 保存到 Firebase
-        showSpecialMessage(points); // 显示特殊消息
+        saveScore();
+        showSpecialMessage(points);
+        updatePuppyState(points); // 添加这行
       }
     } else {
       points = type === 'add' ? item.points : -item.points;
       score += points;
       log.push({time: Date.now(), action: item.name, points});
-      saveScore(); // 保存到 Firebase
-      showSpecialMessage(points); // 显示特殊消息
+      saveScore();
+      showSpecialMessage(points);
+      updatePuppyState(points); // 添加这行
     }
     updateDisplay();
   };
@@ -390,18 +386,6 @@ window.onload = function() {
   // 初始化小狗功能
   initPuppy();
   
-  // 应用保存的主题
-  switchTheme(theme);
-  
-  // 初始化主题切换按钮
-  initThemeButtons();
-  
-  // 初始化成就系统
-  initAchievements();
-  
-  // 初始化心情系统
-  initMoodSystem();
-  
   // 初始化实时时钟
   updateClock();
   setInterval(updateClock, 1000);
@@ -441,8 +425,13 @@ function initThemeButtons() {
 // 小狗功能初始化
 function initPuppy() {
   const puppy = document.getElementById('cute-puppy');
-  speechBubble = document.getElementById('puppy-speech-bubble'); // 将引用保存到全局变量
+  speechBubble = document.getElementById('puppy-speech-bubble');
   const puppyImage = document.getElementById('puppy-image');
+  
+  // 添加CSS变量来控制动画速度
+  document.documentElement.style.setProperty('--puppy-gif-speed', '1s');
+  document.documentElement.style.setProperty('--puppy-move-range', '50px');
+  document.documentElement.style.setProperty('--puppy-move-interval', '5000ms');
   
   // 小狗可能说的话
   const puppyPhrases = [
@@ -508,10 +497,48 @@ function initPuppy() {
     }, 300);
   });
   
+  // 更新小狗的活动状态
+  function updatePuppyState(points) {
+    const root = document.documentElement;
+    if (points > 0) {
+        // 加分时增加活动范围和速度
+        const speedMultiplier = 1 + (Math.min(points, 30) / 3);
+        root.style.setProperty('--puppy-gif-speed', `${1/speedMultiplier}s`);
+        const rangeMultiplier = 1 + (Math.min(points, 30) / 2);
+        
+        root.style.setProperty('--puppy-gif-speed', `${1/speedMultiplier}s`);
+        root.style.setProperty('--puppy-move-range', `${400 * rangeMultiplier}px`);
+        root.style.setProperty('--puppy-move-interval', `${500 / speedMultiplier}ms`);
+        
+        // 7秒后恢复正常
+        setTimeout(() => {
+          root.style.setProperty('--puppy-gif-speed', '1s');
+          root.style.setProperty('--puppy-move-range', '400px');
+          root.style.setProperty('--puppy-move-interval', '500ms');
+        }, 7000);
+    } else if (points < 0) {
+        // 扣分时减少活动范围和速度
+        const speedMultiplier = Math.max(0.1, 1 + (points / 3));
+        root.style.setProperty('--puppy-gif-speed', `${1/speedMultiplier}s`);
+        const rangeMultiplier = Math.max(0.1, 1 + (points / 4));
+        
+        root.style.setProperty('--puppy-gif-speed', `${1/speedMultiplier}s`);
+        root.style.setProperty('--puppy-move-range', `${400 * rangeMultiplier}px`);
+        root.style.setProperty('--puppy-move-interval', `${500 / speedMultiplier}ms`);
+        
+        // 7秒后恢复正常
+        setTimeout(() => {
+          root.style.setProperty('--puppy-gif-speed', '1s');
+          root.style.setProperty('--puppy-move-range', '400px');
+          root.style.setProperty('--puppy-move-interval', '500ms');
+        }, 7000);
+    }
+  }
+  
   // 小狗随机移动
   function randomMove() {
-    const maxX = 40; // 最大水平移动范围
-    const maxY = 20; // 最大垂直移动范围
+    const maxX = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--puppy-move-range')); 
+    const maxY = maxX / 2; // 垂直移动范围是水平的一半
     
     const randomX = Math.random() * maxX - maxX/2;
     const randomY = Math.random() * maxY - maxY/2;
@@ -523,8 +550,14 @@ function initPuppy() {
     }, 500);
   }
   
-  // 定期随机移动
-  setInterval(randomMove, Math.random() * 10000 + 5000);
+  // 定期随机移动，使用CSS变量控制间隔
+  function startRandomMovement() {
+    randomMove();
+    const interval = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--puppy-move-interval'));
+    setTimeout(startRandomMovement, interval);
+  }
+  
+  startRandomMovement();
 }
 
 // 获取随机积分，调整概率分布
@@ -627,3 +660,142 @@ function switchTheme(newTheme) {
     }, 3000);
   }
 }
+
+// 登录系统
+function setupLoginSystem() {
+    const loginScreen = document.getElementById('loginScreen');
+    const loginBtn = document.getElementById('loginBtn');
+    const passwordInput = document.getElementById('passwordInput');
+    const loginError = document.getElementById('loginError');
+    
+    // 设置密码
+    const ADMIN_PASSWORD = "123"; // 管理员密码
+    const PUPPY_PASSWORD = "lele"; // 小狗密码
+    
+    // 检查是否已登录
+    const userRole = localStorage.getItem('userRole');
+    if (userRole) {
+        loginScreen.style.display = 'none';
+        applyRolePermissions(userRole);
+    }
+    
+    // 登录按钮点击事件
+    loginBtn.addEventListener('click', () => {
+        const password = passwordInput.value;
+        
+        if (!password) {
+            loginError.textContent = "请输入密码";
+            return;
+        }
+        
+        if (password === ADMIN_PASSWORD) {
+            // 管理员登录
+            localStorage.setItem('userRole', 'admin');
+            loginScreen.style.display = 'none';
+            applyRolePermissions('admin');
+        } else if (password === PUPPY_PASSWORD) {
+            // 小狗登录
+            localStorage.setItem('userRole', 'puppy');
+            loginScreen.style.display = 'none';
+            applyRolePermissions('puppy');
+        } else {
+            loginError.textContent = "密码错误，请重试";
+        }
+    });
+    
+    // 添加回车键登录
+    passwordInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            loginBtn.click();
+        }
+    });
+}
+
+// 应用角色权限
+function applyRolePermissions(role) {
+    const deductBtns = document.querySelectorAll('.deduct-btn');
+    const addBtns = document.querySelectorAll('.add-btn');
+    const storeBtns = document.querySelectorAll('.store-btn');
+    
+    if (role === 'admin') {
+        // 管理员可以执行所有操作
+        deductBtns.forEach(btn => btn.disabled = false);
+        addBtns.forEach(btn => btn.disabled = false);
+        storeBtns.forEach(btn => btn.disabled = false);
+    } else if (role === 'puppy') {
+        // 小狗只能查看，不能加减分
+        deductBtns.forEach(btn => {
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            btn.style.cursor = 'not-allowed';
+        });
+        addBtns.forEach(btn => {
+            if (!btn.id || btn.id !== 'loginBtn') { // 排除登录按钮
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+                btn.style.cursor = 'not-allowed';
+            }
+        });
+        // 商店按钮可以点击
+        storeBtns.forEach(btn => btn.disabled = false);
+    }
+}
+
+// 添加退出登录功能
+function addLogoutButton() {
+    const logoutBtn = document.createElement('button');
+    logoutBtn.textContent = '退出登录';
+    logoutBtn.className = 'btn';
+    logoutBtn.style.position = 'fixed';
+    logoutBtn.style.top = '10px';
+    logoutBtn.style.right = '10px';
+    logoutBtn.style.zIndex = '999';
+    logoutBtn.style.padding = '8px 12px';
+    logoutBtn.style.fontSize = '0.8em';
+    
+    logoutBtn.addEventListener('click', () => {
+        localStorage.removeItem('userRole');
+        location.reload();
+    });
+    
+    document.body.appendChild(logoutBtn);
+}
+
+// 在页面加载完成后初始化
+window.onload = function() {
+    // 设置登录系统
+    setupLoginSystem();
+    
+    // 添加退出登录按钮
+    addLogoutButton();
+    
+    // 初始化所有按钮
+    Object.keys(rules).forEach(type => {
+        const container = document.getElementById(type === 'store' ? 'store' : type);
+        rules[type].forEach(item => {
+            container.appendChild(createButton(
+                type === 'store' ? 'store' : type === 'additions' ? 'add' : 'deduct',
+                item
+            ));
+        });
+    });
+
+    // 加载Firebase数据
+    loadScore();
+    
+    // 初始化天数显示
+    updateDaysDisplay();
+    
+    // 检查并更新天数
+    checkAndUpdateDays();
+    
+    // 设置每小时检查一次是否过了午夜
+    setInterval(checkAndUpdateDays, 60 * 60 * 1000);
+
+    // 初始化小狗功能
+    initPuppy();
+    
+    // 初始化实时时钟
+    updateClock();
+    setInterval(updateClock, 1000);
+};
