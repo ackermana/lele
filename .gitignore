@@ -1,5 +1,5 @@
 # 敏感配置文件
-config.js
+# config.js
 
 # 其他常见忽略文件
 node_modules/
