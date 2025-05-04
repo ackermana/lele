@@ -2,6 +2,8 @@
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
 import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+// 导入配置文件
+import { firebaseConfig, ADMIN_PASSWORD, PUPPY_PASSWORD } from './config.js';
 
 // 全局变量
 let score = 0; // 当前积分
@@ -57,17 +59,6 @@ function showSpecialMessage(points) {
   }, 6000);
 }
 
-// Firebase配置信息
-const firebaseConfig = {
-  apiKey: "AIzaSyAWIdKwbQBX5-GTfMwb_El4991OXK-_Bfw",
-  authDomain: "puppy-5443b.firebaseapp.com",
-  databaseURL: "https://puppy-5443b-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "puppy-5443b",
-  storageBucket: "puppy-5443b.firebasestorage.app",
-  messagingSenderId: "548254394160",
-  appId: "1:548254394160:web:268692ff52ecf641adcaf5",
-  measurementId: "G-T0X1YL9RXX"
-};
 
 // 初始化Firebase应用
 let app;
@@ -280,7 +271,7 @@ function updateDisplay() {
         <div class="log-time">${new Date(entry.time).toLocaleDateString()} ${new Date(entry.time).toLocaleTimeString()}</div>
         <div class="log-content">
           <span class="log-action">${entry.action}</span>
-          <span class="badge ${entry.points > 0 ? 'badge-add' : 'badge-deduct'}">${entry.points > 0 ? '+' : ''}${entry.points}</span>
+          <span class="badge ${entry.action.includes('兑换') ? 'badge-store' : entry.points > 0 ? 'badge-add' : 'badge-deduct'}">${entry.points > 0 ? '+' : ''}${entry.points}</span>
         </div>
       </div>`
     ).join('');
@@ -300,6 +291,19 @@ function createButton(type, item) {
   `;
   
   btn.onclick = () => {
+    // 处理自定义记录功能
+    if (item.isCustomRecord) {
+      const customText = prompt("请输入要记录的内容：");
+      if (customText && customText.trim() !== "") {
+        const points = 0; // 自定义记录不增减积分
+        log.push({time: Date.now(), action: `记录: ${customText}`, points});
+        saveScore();
+        updateDisplay();
+        showMessage("记录已保存！", 3000);
+      }
+      return;
+    }
+    
     let points = 0;
     if(type === 'store') {
       if(score >= item.cost) {
@@ -348,6 +352,7 @@ const rules = {
     {name: "其他让主人高兴行为", points: 10, desc: "无上限"}
   ],
   store: [
+    {name: "记录下今天吧~", cost: 0, desc: "记录咯", isCustomRecord: true},
     {name: "抱抱", cost: 0},
     {name: "亲亲", cost: 0},
     {name: "摸摸它", cost: 10},
@@ -668,9 +673,7 @@ function setupLoginSystem() {
     const passwordInput = document.getElementById('passwordInput');
     const loginError = document.getElementById('loginError');
     
-    // 设置密码
-    const ADMIN_PASSWORD = "123"; // 管理员密码
-    const PUPPY_PASSWORD = "lele"; // 小狗密码
+    // 密码已移至config.js
     
     // 检查是否已登录
     const userRole = localStorage.getItem('userRole');
