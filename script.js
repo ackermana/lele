@@ -370,7 +370,7 @@ function renderDailyTasks() {
       
       // 更新任务状态
       dailyTasks[index].completed = task.completed;
-      saveDailyTasks();
+      saveDailyTasks(); // 确保任务状态变更后保存到Firebase
       taskItem.classList.toggle('task-completed', task.completed);
       updateDisplay();
     });
