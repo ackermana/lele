@@ -892,6 +892,12 @@ window.onload = function() {
     });
   });
 
+  // 在页面加载时检查登录状态
+  const isLoggedIn = localStorage.getItem('isLoggedIn');
+  if (isLoggedIn === 'true') {
+    document.getElementById('loginScreen').style.display = 'none';
+  }
+
   // 添加登录按钮事件监听
   const loginBtn = document.getElementById('loginBtn');
   const passwordInput = document.getElementById('passwordInput');
@@ -905,6 +911,7 @@ window.onload = function() {
       if (password === ADMIN_PASSWORD) {
         // 主人登录
         localStorage.setItem('userRole', 'admin');
+        localStorage.setItem('isLoggedIn', 'true');
         loginIdentity = 'master';
         loginScreen.style.display = 'none';
         // 显示欢迎消息
@@ -923,6 +930,7 @@ window.onload = function() {
       } else if (password === PUPPY_PASSWORD) {
         // 小狗登录
         localStorage.setItem('userRole', 'puppy');
+        localStorage.setItem('isLoggedIn', 'true');
         loginIdentity = 'puppy';
         loginScreen.style.display = 'none';
         // 显示欢迎消息
@@ -976,6 +984,7 @@ window.onload = function() {
   logoutBtn.addEventListener('click', function() {
     if(confirm('确定要退出登录吗？')) {
       localStorage.removeItem('userRole');
+      localStorage.removeItem('isLoggedIn');
       location.reload(); // 刷新页面，回到登录界面
     }
   });
@@ -1165,3 +1174,114 @@ function renderWishes() {
     wishesContainer.appendChild(wishItem);
   });
 }
+
+// 移动任务项的函数
+function moveTask(taskId, direction) {
+  const taskList = document.getElementById('dailyTasks');
+  const taskItems = Array.from(taskList.getElementsByClassName('task-item'));
+  const currentTask = taskItems.find(item => item.dataset.taskId === taskId);
+  const currentIndex = taskItems.indexOf(currentTask);
+  
+  if (direction === 'up' && currentIndex > 0) {
+      taskList.insertBefore(currentTask, taskItems[currentIndex - 1]);
+      updateTasksOrder();
+  } else if (direction === 'down' && currentIndex < taskItems.length - 1) {
+      taskList.insertBefore(taskItems[currentIndex + 1], currentTask);
+      updateTasksOrder();
+  }
+  
+  // 更新按钮状态
+  updateMoveButtons();
+}
+
+// 移动愿望项的函数
+function moveWish(wishId, direction) {
+  const wishList = document.getElementById('wishItems');
+  const wishItems = Array.from(wishList.getElementsByClassName('wish-item'));
+  const currentWish = wishItems.find(item => item.dataset.wishId === wishId);
+  const currentIndex = wishItems.indexOf(currentWish);
+  
+  if (direction === 'up' && currentIndex > 0) {
+      wishList.insertBefore(currentWish, wishItems[currentIndex - 1]);
+      updateWishesOrder();
+  } else if (direction === 'down' && currentIndex < wishItems.length - 1) {
+      wishList.insertBefore(wishItems[currentIndex + 1], currentWish);
+      updateWishesOrder();
+  }
+  
+  // 更新按钮状态
+  updateMoveButtons();
+}
+
+// 更新移动按钮状态
+function updateMoveButtons() {
+  // 更新任务项的按钮状态
+  const taskItems = Array.from(document.getElementsByClassName('task-item'));
+  taskItems.forEach((item, index) => {
+      const upBtn = item.querySelector('.move-up-btn');
+      const downBtn = item.querySelector('.move-down-btn');
+      
+      upBtn.classList.toggle('disabled', index === 0);
+      downBtn.classList.toggle('disabled', index === taskItems.length - 1);
+  });
+  
+  // 更新愿望项的按钮状态
+  const wishItems = Array.from(document.getElementsByClassName('wish-item'));
+  wishItems.forEach((item, index) => {
+      const upBtn = item.querySelector('.move-up-btn');
+      const downBtn = item.querySelector('.move-down-btn');
+      
+      upBtn.classList.toggle('disabled', index === 0);
+      downBtn.classList.toggle('disabled', index === wishItems.length - 1);
+  });
+}
+
+// 更新任务顺序到数据库
+function updateTasksOrder() {
+  const taskItems = Array.from(document.getElementsByClassName('task-item'));
+  const taskOrder = taskItems.map(item => item.dataset.taskId);
+  
+  // 更新到Firebase数据库
+  const tasksRef = ref(db, 'tasks');
+  update(tasksRef, { order: taskOrder });
+}
+
+// 更新愿望顺序到数据库
+function updateWishesOrder() {
+  const wishItems = Array.from(document.getElementsByClassName('wish-item'));
+  const wishOrder = wishItems.map(item => item.dataset.wishId);
+  
+  // 更新到Firebase数据库
+  const wishesRef = ref(db, 'wishes');
+  update(wishesRef, { order: wishOrder });
+}
+
+// ... existing code ...
+
+// 在渲染任务和愿望项时添加移动按钮的事件监听器
+function renderTaskItem(task) {
+  // ... existing code ...
+  
+  // 添加移动按钮的点击事件
+  const upBtn = taskElement.querySelector('.move-up-btn');
+  const downBtn = taskElement.querySelector('.move-down-btn');
+  
+  upBtn.addEventListener('click', () => moveTask(task.id, 'up'));
+  downBtn.addEventListener('click', () => moveTask(task.id, 'down'));
+}
+
+function renderWishItem(wish) {
+  // ... existing code ...
+  
+  // 添加移动按钮的点击事件
+  const upBtn = wishElement.querySelector('.move-up-btn');
+  const downBtn = wishElement.querySelector('.move-down-btn');
+  
+  upBtn.addEventListener('click', () => moveWish(wish.id, 'up'));
+  downBtn.addEventListener('click', () => moveWish(wish.id, 'down'));
+}
+
+// 在页面加载完成后初始化移动按钮状态
+document.addEventListener('DOMContentLoaded', () => {
+  updateMoveButtons();
+});

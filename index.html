@@ -227,6 +227,26 @@
             font-size: 14px;
         }
         
+        /* 添加移动按钮样式 */
+        .move-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #999;
+            transition: color 0.3s;
+            font-size: 14px;
+            padding: 0 5px;
+        }
+        
+        .move-btn:hover {
+            color: #4488ff;
+        }
+        
+        /* 禁用状态的移动按钮 */
+        .move-btn.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
         .task-edit-btn:hover {
             color: #4488ff;
         }
@@ -572,6 +592,8 @@
             --bg: linear-gradient(to right, #fff0f5, #f0f8ff);
             --login-gradient: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
             --login-btn-gradient: linear-gradient(90deg, #ff7eb9 0%, #7afcff 0%);
+            --home-color: #8a6e52; /* 新增：温暖的家的颜色 */
+            --paw-color: #ffc0cb; /* 新增：爪印颜色 */
         }
 
         body {
@@ -924,3 +946,11 @@
     </style>
 </body>
 </html>
+
+<link rel="icon" type="image/png" href="images/icon.png">
+<link rel="apple-touch-icon" href="images/icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="乐乐的小窝">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#ff7eb9">
+<link rel="manifest" href="manifest.json">
