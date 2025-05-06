@@ -3,10 +3,567 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>小狗积分系统 🐾</title>
+    <title>乐乐的小窝 🐾</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <!-- 添加Firebase规则 -->
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <style>
+        :root {
+            --primary: #ff7eb9;
+            --secondary: #7afcff;
+            --bg: linear-gradient(to right, #fff0f5, #f0f8ff);
+            --login-gradient: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            --login-btn-gradient: linear-gradient(90deg, #ff7eb9 0%, #7afcff 0%);
+            --home-color: #8a6e52; /* 新增：温暖的家的颜色 */
+            --paw-color: #ffc0cb; /* 新增：爪印颜色 */
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg);
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            transition: background 0.5s;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 12px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+            background: var(--secondary);
+        }
+
+        .score {
+            font-size: 2.5em;
+            text-align: center;
+            margin: 20px 0;
+            color: var(--primary);
+        }
+
+        .accordion {
+            margin: 8px 0;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            background: #f8f8f8;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .accordion:hover {
+            background: #f0f0f0;
+        }
+
+        .panel {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.2s ease-out;
+        }
+
+        .btn-group {
+            display: grid;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn {
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 500;
+        }
+        
+        .deduct-btn { 
+            background: linear-gradient(to right, #ffe6e6, #ffd6d6); 
+            color: #ff4444; 
+        }
+        .add-btn { 
+            background: linear-gradient(to right, #e6ffe6, #d6ffd6); 
+            color: #44cc44; 
+        }
+        .store-btn { 
+            background: linear-gradient(to right, #e6f3ff, #d6e3ff); 
+            color: #4488ff; 
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+        }
+
+        .log {
+            font-size: 0.9em;
+            color: #666;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .badge {
+            background: var(--primary);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 0.8em;
+        }
+        
+        /* 添加不同类型的badge样式 */
+        .badge-add {
+            background: linear-gradient(to right, #e6ffe6, #d6ffd6);
+            color: #44cc44;
+        }
+        
+        .badge-deduct {
+            background: linear-gradient(to right, #ffe6e6, #ffd6d6);
+            color: #ff4444;
+        }
+        
+        /* 添加商店兑换的badge样式 */
+        .badge-store {
+            background: linear-gradient(to right, #e6f3ff, #d6e3ff);
+            color: #4488ff;
+        }
+        
+        .note {
+            font-size: 0.8em;
+            color: #666;
+            margin-top: 10px;
+            padding: 8px;
+            background: #f8f8f8;
+            border-radius: 6px;
+        }
+        
+        /* 添加登录按钮专属样式 */
+        .login-btn {
+            background: linear-gradient(90deg, #ffd6ef 0%, #eaf6fa 100%);
+            filter: saturate(0.1);
+            color: white;
+            font-weight: bold;
+            width: 100%;
+            filter: saturate(0.7);
+            text-align: center;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+            opacity: 0.9;
+        }
+        
+        /* 添加每日任务相关样式 */
+        .task-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            transition: all 0.3s;
+        }
+        
+        .task-item:hover {
+            background: #f0f0f0;
+        }
+        
+        .task-checkbox {
+            margin-right: 10px;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        
+        .task-content {
+            flex-grow: 1;
+        }
+        
+        .task-name {
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+        
+        .task-points {
+            font-size: 0.8em;
+            color: #44cc44;
+        }
+        
+        .task-controls {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .task-edit-btn, .task-delete-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #999;
+            transition: color 0.3s;
+            font-size: 14px;
+        }
+        
+        .task-edit-btn:hover {
+            color: #4488ff;
+        }
+        
+        .task-delete-btn:hover {
+            color: #ff4444;
+        }
+        
+        .task-completed {
+            opacity: 0.6;
+            text-decoration: line-through;
+        }
+        
+        /* 添加小狗愿望相关样式 */
+        .wish-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            transition: all 0.3s;
+        }
+        
+        .wish-item:hover {
+            background: #f0f0f0;
+        }
+        
+        .wish-checkbox {
+            margin-right: 10px;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        
+        .wish-content {
+            flex-grow: 1;
+        }
+        
+        .wish-name {
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+        
+        .wish-description {
+            font-size: 0.8em;
+            color: #666;
+        }
+        
+        .wish-controls {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .wish-edit-btn, .wish-delete-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #999;
+            transition: color 0.3s;
+            font-size: 14px;
+        }
+        
+        .wish-edit-btn:hover {
+            color: #4488ff;
+        }
+        
+        .wish-delete-btn:hover {
+            color: #ff4444;
+        }
+        
+        .wish-completed {
+            opacity: 0.6;
+            text-decoration: line-through;
+        }
+        
+        /* 添加小狗愿望相关样式 */
+        .wish-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            transition: all 0.3s;
+        }
+        
+        .wish-item:hover {
+            background: #f0f0f0;
+        }
+        
+        .wish-checkbox {
+            margin-right: 10px;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        
+        .wish-content {
+            flex-grow: 1;
+        }
+        
+        .wish-name {
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+        
+        .wish-description {
+            font-size: 0.8em;
+            color: #666;
+        }
+        
+        .wish-controls {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .wish-edit-btn, .wish-delete-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #999;
+            transition: color 0.3s;
+            font-size: 14px;
+        }
+        
+        .wish-edit-btn:hover {
+            color: #4488ff;
+        }
+        
+        .wish-delete-btn:hover {
+            color: #ff4444;
+        }
+        
+        .wish-completed {
+            opacity: 0.6;
+            text-decoration: line-through;
+        }
+    </style>
+</head>
+<body>
+    <!-- 登录界面 -->
+    <div id="loginScreen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 1000; display: flex; justify-content: center; align-items: center; flex-direction: column;">
+        <h1 style="text-align: center; color: var(--primary);">🐾 小狗积分系统 🦴</h1>
+        <div class="card" style="width: 300px; max-width: 90%;">
+            <h2>请输入密码</h2>
+            <div style="margin: 20px 0;">
+                <input type="password" id="passwordInput" placeholder="请输入密码" style="width: 90%; padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #ddd;">
+                <button id="loginBtn" class="btn login-btn">登录</button>
+                <p id="loginError" style="color: red; font-size: 0.8em;"></p>
+            </div>
+        </div>
+    </div>
+
+    <h1 style="text-align: center; color: var(--primary);">🐾 乐乐的小窝 🦴</h1>
+    
+    <div style="text-align: center; margin-bottom: 10px; font-size: 1.2em; color: var(--primary);">
+        （小狗积分系统）
+    </div>
+
+    <div class="score" id="totalScore" style="font-weight: bold;">当前积分：${score}</div>
+
+    <div class="dashboard">
+        <!-- 添加每日清单卡片 -->
+        <div class="card">
+            <div class="accordion" onclick="window.togglePanel('dailyTaskPanel')">
+                <h2>🏠 每日家务</h2>
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div id="dailyTaskPanel" class="panel">
+                <div class="daily-tasks" id="dailyTasks">
+                    <!-- 任务列表将通过JavaScript动态生成 -->
+                </div>
+                <div class="admin-controls" id="taskAdminControls" style="margin-top: 15px;">
+                    <button class="btn add-btn" id="addTaskBtn" style="width: 100%;">
+                        <div style="text-align:center; width: 100%;">添加新任务</div>
+                    </button>
+                </div>
+                <div class="note">
+                    每日任务完成后打勾即可获得积分！<br>
+                    做个乖小狗，每天完成任务哦~
+                </div>
+            </div>
+        </div>
+
+        <!-- 将小狗愿望卡片移动到这里 -->
+        <div class="card">
+            <div class="accordion" onclick="window.togglePanel('wishPanel')">
+                <h2>🎁 小狗心愿墙</h2>
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div id="wishPanel" class="panel">
+                <div class="wish-items" id="wishItems">
+                    <!-- 愿望列表将通过JavaScript动态生成 -->
+                </div>
+                <div class="wish-controls" id="wishControls" style="margin-top: 15px;">
+                    <button class="btn add-btn" id="addWishBtn" style="width: 100%;">
+                        <div style="text-align:center; width: 100%;">添加新愿望</div>
+                    </button>
+                </div>
+                <div class="note">
+                    小狗可以添加自己的愿望，主人可以帮忙实现哦~<br>
+                    实现愿望后主人会划掉它！
+                </div>
+            </div>
+        </div>
+        <!-- 下面是其它卡片 -->
+        <div class="card">
+            <div class="accordion" onclick="window.togglePanel('deductPanel')">
+                <h2>📉 小狗犯错了</h2>
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div id="deductPanel" class="panel">
+                <div class="btn-group" id="deductions"></div>
+                <div class="note">
+                    惩罚包括：罚抄、挨打、主人不理！<br>
+                    扣分有误可申诉，经主人认定返还并奖励！
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="accordion" onclick="window.togglePanel('addPanel')">
+                <h2>📈 小狗表现好</h2>
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div id="addPanel" class="panel">
+                <div class="btn-group" id="additions"></div>
+                <div class="note">
+                    奖励包括：商店项目、小狗其他要求<br>
+                    小狗可以随时申请添加！
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="accordion" onclick="window.togglePanel('storePanel')">
+                <h2>🛍️ 积分商店</h2>
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div id="storePanel" class="panel">
+                <div class="btn-group" id="store"></div>
+                <div class="note">待添加。。。。。。</div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="card">
+        <h2>📝 历史记录</h2>
+        <div class="log" id="log"></div>
+    </div>
+
+    <div class="note" style="margin: 20px auto 0; text-align: center; max-width: 600px;">
+        注：最终解释权在主人
+    </div>
+    
+    <!-- 修改已陪伴天数显示为实时计时器 -->
+    <div id="accompanyDaysContainer" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: white; padding: 10px 20px; border-radius: 20px; box-shadow: 0 3px 10px rgba(0,0,0,0.1); z-index: 100; font-size: 0.9em; display: flex; align-items: center;">
+        <i class="fas fa-heart" style="color: var(--primary); margin-right: 8px;"></i>
+        <span id="accompanyDays">0天 00:00:00</span>
+    </div>
+
+    <!-- 添加可爱小狗 -->
+    <div id="cute-puppy">
+        <div id="puppy-speech-bubble">汪汪~</div>
+        <img src="puppy.gif" alt="可爱小狗" id="puppy-image">
+    </div>
+    
+
+    <!-- 在 body 结束标签前添加 -->
+    <script type="module" src="script.js"></script>
+    
+    <style>
+        #cute-puppy {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            z-index: 1000;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        
+        #puppy-image {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+            animation: bounce var(--puppy-gif-speed, 1s) infinite; /* 使用CSS变量 */
+            animation-timing-function: ease-in-out;
+            animation-play-state: running;
+            animation-duration: calc(0.5s / var(--puppy-animation-speed, 1));
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        
+        #cute-puppy {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            z-index: 1000;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        
+        #puppy-image:hover {
+            transform: translateY(-5px);
+        }
+        
+        #puppy-speech-bubble {
+            position: absolute;
+            top: -40px;
+            left: -20px;
+            background: white;
+            padding: 8px 12px;
+            border-radius: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            font-size: 14px;
+            max-width: 150px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        
+        #puppy-speech-bubble:after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            right: 20px;
+            border-width: 10px 10px 0;
+            border-style: solid;
+            border-color: white transparent;
+        }
+    </style>
     <style>
         :root {
             --primary: #ff7eb9;
@@ -237,351 +794,9 @@
             opacity: 0.6;
             text-decoration: line-through;
         }
-    </style>
-</head>
-<body>
-    <!-- 登录界面 -->
-    <div id="loginScreen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 1000; display: flex; justify-content: center; align-items: center; flex-direction: column;">
-        <h1 style="text-align: center; color: var(--primary);">🐾 小狗积分系统 🦴</h1>
-        <div class="card" style="width: 300px; max-width: 90%;">
-            <h2>请输入密码</h2>
-            <div style="margin: 20px 0;">
-                <input type="password" id="passwordInput" placeholder="请输入密码" style="width: 90%; padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #ddd;">
-                <button id="loginBtn" class="btn login-btn">登录</button>
-                <p id="loginError" style="color: red; font-size: 0.8em;"></p>
-            </div>
-        </div>
-    </div>
-
-    <h1 style="text-align: center; color: var(--primary);">🐾 小狗积分系统 🦴</h1>
-    
-    <div style="text-align: center; margin-bottom: 10px; font-size: 1.2em; color: var(--primary);">
-        主人 小郝  ❤  乐乐 小狗
-    </div>
-
-    <div class="score" id="totalScore" style="font-weight: bold;">当前积分：${score}</div>
-
-    <div class="dashboard">
-        <!-- 添加每日清单卡片 -->
-        <div class="card">
-            <div class="accordion" onclick="window.togglePanel('dailyTaskPanel')">
-                <h2>📋 每日清单</h2>
-                <i class="fas fa-chevron-down"></i>
-            </div>
-            <div id="dailyTaskPanel" class="panel">
-                <div class="daily-tasks" id="dailyTasks">
-                    <!-- 任务列表将通过JavaScript动态生成 -->
-                </div>
-                <div class="admin-controls" id="taskAdminControls" style="margin-top: 15px;">
-                    <button class="btn add-btn" id="addTaskBtn" style="width: 100%;">
-                        <div style="text-align:center; width: 100%;">添加新任务</div>
-                    </button>
-                </div>
-                <div class="note">
-                    每日任务完成后打勾即可获得积分！<br>
-                    做个乖小狗，每天完成任务哦~
-                </div>
-            </div>
-        </div>
         
-        <div class="card">
-            <div class="accordion" onclick="window.togglePanel('deductPanel')">
-                <h2>📉 扣分项目</h2>
-                <i class="fas fa-chevron-down"></i>
-            </div>
-            <div id="deductPanel" class="panel">
-                <div class="btn-group" id="deductions"></div>
-                <div class="note">
-                    惩罚包括：罚抄、挨打、主人不理！<br>
-                    扣分有误可申诉，经主人认定返还并奖励！
-                </div>
-            </div>
-        </div>
-        
-        <div class="card">
-            <div class="accordion" onclick="window.togglePanel('addPanel')">
-                <h2>📈 加分项目</h2>
-                <i class="fas fa-chevron-down"></i>
-            </div>
-            <div id="addPanel" class="panel">
-                <div class="btn-group" id="additions"></div>
-                <div class="note">
-                    奖励包括：商店项目、小狗其他要求<br>
-                    小狗可以随时申请添加！
-                </div>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="accordion" onclick="window.togglePanel('storePanel')">
-                <h2>🛍️ 积分商店</h2>
-                <i class="fas fa-chevron-down"></i>
-            </div>
-            <div id="storePanel" class="panel">
-                <div class="btn-group" id="store"></div>
-                <div class="note">待添加。。。。。。</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="card">
-        <h2>📝 历史记录</h2>
-        <div class="log" id="log"></div>
-    </div>
-
-    <div class="note" style="margin: 20px auto 0; text-align: center; max-width: 600px;">
-        注：最终解释权在主人
-    </div>
-    
-    <!-- 修改已陪伴天数显示为实时计时器 -->
-    <div id="accompanyDaysContainer" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: white; padding: 10px 20px; border-radius: 20px; box-shadow: 0 3px 10px rgba(0,0,0,0.1); z-index: 100; font-size: 0.9em; display: flex; align-items: center;">
-        <i class="fas fa-heart" style="color: var(--primary); margin-right: 8px;"></i>
-        <span id="accompanyDays">0天 00:00:00</span>
-    </div>
-
-    <!-- 添加可爱小狗 -->
-    <div id="cute-puppy">
-        <div id="puppy-speech-bubble">汪汪~</div>
-        <img src="puppy.gif" alt="可爱小狗" id="puppy-image">
-    </div>
-
-    <!-- 在 body 结束标签前添加 -->
-    <script type="module" src="script.js"></script>
-    
-    <style>
-        #cute-puppy {
-            position: fixed;
-            right: 20px;
-            bottom: 20px;
-            z-index: 1000;
-            cursor: pointer;
-            transition: transform 0.3s;
-        }
-        
-        #puppy-image {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
-            animation: bounce var(--puppy-gif-speed, 1s) infinite; /* 使用CSS变量 */
-            animation-timing-function: ease-in-out;
-            animation-play-state: running;
-            animation-duration: calc(0.5s / var(--puppy-animation-speed, 1));
-        }
-        
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-5px); }
-        }
-        
-        #cute-puppy {
-            position: fixed;
-            right: 20px;
-            bottom: 20px;
-            z-index: 1000;
-            cursor: pointer;
-            transition: transform 0.3s;
-        }
-        
-        #puppy-image:hover {
-            transform: translateY(-5px);
-        }
-        
-        #puppy-speech-bubble {
-            position: absolute;
-            top: -40px;
-            left: -20px;
-            background: white;
-            padding: 8px 12px;
-            border-radius: 15px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            font-size: 14px;
-            max-width: 150px;
-            opacity: 0;
-            transition: opacity 0.3s;
-            pointer-events: none;
-        }
-        
-        #puppy-speech-bubble:after {
-            content: '';
-            position: absolute;
-            bottom: -10px;
-            right: 20px;
-            border-width: 10px 10px 0;
-            border-style: solid;
-            border-color: white transparent;
-        }
-    </style>
-    <style>
-        :root {
-            --primary: #ff7eb9;
-            --secondary: #7afcff;
-            --bg: linear-gradient(to right, #fff0f5, #f0f8ff);
-            --login-gradient: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
-            --login-btn-gradient: linear-gradient(90deg, #ff7eb9 0%, #7afcff 100%);
-        }
-
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background: var(--bg);
-            padding: 20px;
-            max-width: 800px;
-            margin: 0 auto;
-            transition: background 0.5s;
-        }
-
-        .dashboard {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .card {
-            background: white;
-            border-radius: 15px;
-            padding: 12px;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-            transition: transform 0.3s, box-shadow 0.3s;
-        }
-        
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
-            background: var(--secondary);
-        }
-
-        .score {
-            font-size: 2.5em;
-            text-align: center;
-            margin: 20px 0;
-            color: var(--primary);
-        }
-
-        .accordion {
-            margin: 8px 0;
-            cursor: pointer;
-            padding: 8px;
-            border-radius: 8px;
-            background: #f8f8f8;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .accordion:hover {
-            background: #f0f0f0;
-        }
-
-        .panel {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.2s ease-out;
-        }
-
-        .btn-group {
-            display: grid;
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .btn {
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-weight: 500;
-        }
-        
-        .deduct-btn { 
-            background: linear-gradient(to right, #ffe6e6, #ffd6d6); 
-            color: #ff4444; 
-        }
-        .add-btn { 
-            background: linear-gradient(to right, #e6ffe6, #d6ffd6); 
-            color: #44cc44; 
-        }
-        .store-btn { 
-            background: linear-gradient(to right, #e6f3ff, #d6e3ff); 
-            color: #4488ff; 
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
-        }
-
-        .log {
-            font-size: 0.9em;
-            color: #666;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-
-        .badge {
-            background: var(--primary);
-            color: white;
-            padding: 3px 8px;
-            border-radius: 5px;
-            font-size: 0.8em;
-        }
-        
-        /* 添加不同类型的badge样式 */
-        .badge-add {
-            background: linear-gradient(to right, #e6ffe6, #d6ffd6);
-            color: #44cc44;
-        }
-        
-        .badge-deduct {
-            background: linear-gradient(to right, #ffe6e6, #ffd6d6);
-            color: #ff4444;
-        }
-        
-        /* 添加商店兑换的badge样式 */
-        .badge-store {
-            background: linear-gradient(to right, #e6f3ff, #d6e3ff);
-            color: #4488ff;
-        }
-        
-        .note {
-            font-size: 0.8em;
-            color: #666;
-            margin-top: 10px;
-            padding: 8px;
-            background: #f8f8f8;
-            border-radius: 6px;
-        }
-        
-        /* 添加登录按钮专属样式 */
-        .login-btn {
-            background: linear-gradient(90deg, #ffd6ef 0%, #eaf6fa 100%);
-            filter: saturate(0.1);
-            color: white;
-            font-weight: bold;
-            width: 100%;
-            filter: saturate(0.7);
-            text-align: center;
-            justify-content: center;
-            align-items: center;
-        }
-        
-        .login-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
-            opacity: 0.9;
-        }
-        
-        /* 添加每日任务相关样式 */
-        .task-item {
+        /* 添加小狗愿望相关样式 */
+        .wish-item {
             display: flex;
             align-items: center;
             padding: 10px;
@@ -591,37 +806,37 @@
             transition: all 0.3s;
         }
         
-        .task-item:hover {
+        .wish-item:hover {
             background: #f0f0f0;
         }
         
-        .task-checkbox {
+        .wish-checkbox {
             margin-right: 10px;
             width: 20px;
             height: 20px;
             cursor: pointer;
         }
         
-        .task-content {
+        .wish-content {
             flex-grow: 1;
         }
         
-        .task-name {
+        .wish-name {
             font-weight: 500;
             margin-bottom: 2px;
         }
         
-        .task-points {
+        .wish-description {
             font-size: 0.8em;
-            color: #44cc44;
+            color: #666;
         }
         
-        .task-controls {
+        .wish-controls {
             display: flex;
             gap: 5px;
         }
         
-        .task-edit-btn, .task-delete-btn {
+        .wish-edit-btn, .wish-delete-btn {
             background: none;
             border: none;
             cursor: pointer;
@@ -630,15 +845,78 @@
             font-size: 14px;
         }
         
-        .task-edit-btn:hover {
+        .wish-edit-btn:hover {
             color: #4488ff;
         }
         
-        .task-delete-btn:hover {
+        .wish-delete-btn:hover {
             color: #ff4444;
         }
         
-        .task-completed {
+        .wish-completed {
+            opacity: 0.6;
+            text-decoration: line-through;
+        }
+        
+        /* 添加小狗愿望相关样式 */
+        .wish-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            transition: all 0.3s;
+        }
+        
+        .wish-item:hover {
+            background: #f0f0f0;
+        }
+        
+        .wish-checkbox {
+            margin-right: 10px;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        
+        .wish-content {
+            flex-grow: 1;
+        }
+        
+        .wish-name {
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+        
+        .wish-description {
+            font-size: 0.8em;
+            color: #666;
+        }
+        
+        .wish-controls {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .wish-edit-btn, .wish-delete-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #999;
+            transition: color 0.3s;
+            font-size: 14px;
+        }
+        
+        .wish-edit-btn:hover {
+            color: #4488ff;
+        }
+        
+        .wish-delete-btn:hover {
+            color: #ff4444;
+        }
+        
+        .wish-completed {
             opacity: 0.6;
             text-decoration: line-through;
         }

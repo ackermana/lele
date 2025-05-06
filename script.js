@@ -11,7 +11,13 @@ let log = []; // 操作日志
 let accompanyDays = 51; // 初始天数设置为51天
 let speechBubble = null; // 用于存储对话气泡元素的引用
 let startDate = new Date('2025-03-14T12:00:00'); // 设置为2025年3月14日中午12点
+// 在全局变量部分添加
 let dailyTasks = []; // 添加每日任务数组
+let wishes = []; // 添加小狗愿望数组
+// 添加小狗点击奖励相关变量
+let dailyClickReward = 0; // 今日已获得的点击奖励
+const MAX_DAILY_CLICK_REWARD = 20; // 每日点击奖励上限
+let lastClickRewardDate = ''; // 上次获得点击奖励的日期
 
 // 初始化Firebase应用
 let app;
@@ -47,6 +53,7 @@ function saveDays() {
   }
 }
 
+// 在 loadScore 函数中添加加载愿望的代码
 function loadScore() {
   console.log("正在从 Firebase 加载数据...");
   
@@ -101,6 +108,45 @@ function loadScore() {
       renderDailyTasks();
     }, (error) => {
       console.error("读取每日任务时出错:", error);
+    });
+    
+    // 加载小狗愿望
+    const wishesRef = ref(database, 'lele/wishes');
+    onValue(wishesRef, (snapshot) => {
+      const val = snapshot.val();
+      console.log("加载到小狗愿望:", val);
+      wishes = val || [];
+      renderWishes();
+    }, (error) => {
+      console.error("读取小狗愿望时出错:", error);
+    });
+    
+    // 加载每日点击奖励数据
+    const clickRewardRef = ref(database, 'lele/dailyClickReward');
+    onValue(clickRewardRef, (snapshot) => {
+      const val = snapshot.val();
+      console.log("加载到每日点击奖励数据:", val);
+      if (val) {
+        // 检查是否是今天的数据
+        const today = new Date().toDateString();
+        if (val.date === today) {
+          dailyClickReward = val.amount || 0;
+          lastClickRewardDate = val.date;
+        } else {
+          // 如果不是今天的数据，重置为0
+          dailyClickReward = 0;
+          lastClickRewardDate = today;
+          // 保存新的数据到Firebase
+          saveDailyClickReward();
+        }
+      } else {
+        // 如果没有数据，初始化为0
+        dailyClickReward = 0;
+        lastClickRewardDate = new Date().toDateString();
+        saveDailyClickReward();
+      }
+    }, (error) => {
+      console.error("读取每日点击奖励数据时出错:", error);
     });
   } catch (error) {
     console.error("加载数据时发生错误:", error);
@@ -490,7 +536,17 @@ function initPuppy() {
     
     // 添加点击事件
     puppy.addEventListener('click', () => {
-      const randomPhrases = [
+      // 检查是否可以获得点击奖励
+      const today = new Date().toDateString();
+      
+      // 如果日期变了，重置每日点击奖励计数
+      if (lastClickRewardDate !== today) {
+        dailyClickReward = 0;
+        lastClickRewardDate = today;
+      }
+      
+      // 随机消息
+      let randomPhrases = [
         "汪~",
         "主人，小狗爱您！",
         "摸摸我嘛~",
@@ -502,13 +558,98 @@ function initPuppy() {
         "我会一直陪着主人~"
       ];
       
-      if (speechBubble) {
-        speechBubble.textContent = randomPhrases[Math.floor(Math.random() * randomPhrases.length)];
-        speechBubble.style.opacity = "1";
+      // 检查是否已达到每日点击奖励上限
+      if (dailyClickReward >= MAX_DAILY_CLICK_REWARD) {
+        // 如果已达到上限，显示特殊消息
+        randomPhrases = [
+          "今天的奖励已经领完啦~",
+          "明天再来找我玩吧~",
+          "小狗累了，需要休息~",
+          "主人明天再来摸我吧~",
+          "今天的运气用完了~"
+        ];
         
-        setTimeout(() => {
-          speechBubble.style.opacity = "0";
-        }, 3000);
+        if (speechBubble) {
+          speechBubble.textContent = randomPhrases[Math.floor(Math.random() * randomPhrases.length)];
+          speechBubble.style.opacity = "1";
+          
+          setTimeout(() => {
+            speechBubble.style.opacity = "0";
+          }, 3000);
+        }
+        return;
+      }
+      
+      // 20%的概率获得奖励
+      if (Math.random() < 0.22) {
+        // 获得1、2、3、5、10分，每种概率都为0.2
+        const randomValue = Math.random();
+        let rewardPoints;
+        
+        if (randomValue < 0.25) {
+          rewardPoints = 1;
+        } else if (randomValue < 0.5) {
+          rewardPoints = 2;
+        } else if (randomValue < 0.75) {
+          rewardPoints = 3;
+        } else if (randomValue < 0.9) {
+          rewardPoints = 5;
+        } else {
+          rewardPoints = 10;
+        }
+        
+        // 更新积分和日志
+        score += rewardPoints;
+        dailyClickReward += rewardPoints;
+        
+        // 添加到日志
+        log.push({
+          action: `摸摸小狗获得奖励`,
+          points: rewardPoints,
+          time: Date.now()
+        });
+        
+        // 保存数据
+        saveScore();
+        saveDailyClickReward();
+        
+        // 更新显示
+        updateDisplay();
+        
+        // 显示奖励消息
+        const rewardMessages = [
+          `哇！小狗获得了${rewardPoints}分奖励！`,
+          `好开心！小狗得到${rewardPoints}分！`,
+          `汪汪！主人奖励${rewardPoints}分！`,
+          `摸摸有奖励！${rewardPoints}分到手啦！`,
+          `今天运气真好！获得${rewardPoints}分！`
+        ];
+        
+        if (speechBubble) {
+          speechBubble.textContent = rewardMessages[Math.floor(Math.random() * rewardMessages.length)];
+          speechBubble.style.color = "#4CAF50"; // 绿色表示加分
+          speechBubble.style.backgroundColor = "#E8F5E9"; // 浅绿色背景
+          speechBubble.style.opacity = "1";
+          
+          setTimeout(() => {
+            speechBubble.style.opacity = "0";
+            speechBubble.style.color = ""; 
+            speechBubble.style.backgroundColor = "";
+          }, 6000);
+        }
+        
+        // 更新小狗状态
+        updatePuppyState(rewardPoints);
+      } else {
+        // 没有获得奖励，显示普通消息
+        if (speechBubble) {
+          speechBubble.textContent = randomPhrases[Math.floor(Math.random() * randomPhrases.length)];
+          speechBubble.style.opacity = "1";
+          
+          setTimeout(() => {
+            speechBubble.style.opacity = "0";
+          }, 6000);
+        }
       }
     });
     
@@ -517,6 +658,25 @@ function initPuppy() {
     console.log("小狗初始化完成");
   } else {
     console.error("找不到小狗元素或图片元素！");
+  }
+}
+
+// 保存每日点击奖励数据到Firebase
+function saveDailyClickReward() {
+  try {
+    const today = new Date().toDateString();
+    set(ref(database, 'lele/dailyClickReward'), {
+      date: today,
+      amount: dailyClickReward
+    })
+      .then(() => {
+        console.log("每日点击奖励数据保存成功!");
+      })
+      .catch((error) => {
+        console.error("保存每日点击奖励数据时出错:", error);
+      });
+  } catch (error) {
+    console.error("保存每日点击奖励数据时发生错误:", error);
   }
 }
 
@@ -570,6 +730,22 @@ function createButton(type, item) {
     </div>
     <span>${item.points || item.cost}分</span>
   `;
+  
+  // 检查用户角色，如果是小狗登录且不是每日任务相关按钮，则禁用按钮
+  const isPuppy = localStorage.getItem('userRole') === 'puppy';
+  if (isPuppy && (type === 'add' || type === 'deduct')) {
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+    btn.style.cursor = 'not-allowed';
+    btn.title = '小狗不能修改积分哦~';
+    
+    // 移除点击事件
+    btn.onclick = () => {
+      alert('小狗不能加分哦，要找主人帮忙~');
+    };
+    
+    return btn;
+  }
   
   btn.onclick = () => {
     // 处理自定义记录功能
@@ -761,12 +937,50 @@ window.onload = function() {
     console.error('未找到ID为addTaskBtn的元素，请检查HTML');
   }
   
+
+  // 添加这段代码：为添加愿望按钮添加事件监听器
+  const addWishBtn = document.getElementById('addWishBtn');
+  if (addWishBtn) {
+    addWishBtn.addEventListener('click', addNewWish);
+    console.log('成功为添加愿望按钮添加事件监听器');
+  } else {
+    console.error('未找到ID为addWishBtn的元素，请检查HTML');
+  }
+  
   // 显示管理控制按钮（如果是主人登录）
   const taskAdminControls = document.getElementById('taskAdminControls');
   if (taskAdminControls) {
     // 检查是否是主人登录
     const isAdmin = localStorage.getItem('userRole') === 'admin';
     taskAdminControls.style.display = isAdmin ? 'block' : 'none';
+  }
+  
+  // 根据用户角色添加提示信息
+  const isPuppy = localStorage.getItem('userRole') === 'puppy';
+  if (isPuppy) {
+    // 为加减分面板添加提示信息
+    const addPanel = document.getElementById('addPanel');
+    const deductPanel = document.getElementById('deductPanel');
+    
+    if (addPanel) {
+      const notice = document.createElement('div');
+      notice.className = 'note';
+      notice.style.color = '#ff7eb9';
+      notice.style.fontWeight = 'bold';
+      notice.style.marginBottom = '10px';
+      notice.textContent = '小狗不能自己加分哦，请找主人帮忙~';
+      addPanel.insertBefore(notice, addPanel.firstChild);
+    }
+    
+    if (deductPanel) {
+      const notice = document.createElement('div');
+      notice.className = 'note';
+      notice.style.color = '#ff7eb9';
+      notice.style.fontWeight = 'bold';
+      notice.style.marginBottom = '10px';
+      notice.textContent = '小狗不能自己扣分哦~';
+      deductPanel.insertBefore(notice, deductPanel.firstChild);
+    }
   }
 
   // 初始展开每日清单面板
@@ -775,3 +989,102 @@ window.onload = function() {
     dailyTaskPanel.style.maxHeight = dailyTaskPanel.scrollHeight + "px";
   }
 };
+
+// 保存小狗愿望到Firebase
+function saveWishes() {
+  try {
+    set(ref(database, 'lele/wishes'), wishes)
+      .then(() => {
+        console.log("小狗愿望保存成功!");
+      })
+      .catch((error) => {
+        console.error("保存小狗愿望时出错:", error);
+      });
+  } catch (error) {
+    console.error("保存小狗愿望时发生错误:", error);
+  }
+}
+
+// 添加新愿望
+function addNewWish() {
+  const wishName = prompt('请输入愿望名称:');
+  if (!wishName || wishName.trim() === '') return;
+  const wishDesc = prompt('请输入愿望描述(可选):') || '';
+  const newWish = {
+    id: Date.now(),
+    name: wishName.trim(),
+    description: wishDesc.trim(),
+    completed: false,
+    createdAt: Date.now()
+  };
+  wishes.push(newWish);
+  saveWishes();
+  renderWishes();
+  updatePanelHeight('wishPanel');
+}
+
+// 编辑愿望
+function editWish(index) {
+  const wish = wishes[index];
+  const wishName = prompt('请输入愿望名称:', wish.name);
+  if (!wishName || wishName.trim() === '') return;
+  const wishDesc = prompt('请输入愿望描述(可选):', wish.description || '');
+  wishes[index] = {
+    ...wish,
+    name: wishName.trim(),
+    description: wishDesc.trim()
+  };
+  saveWishes();
+  renderWishes();
+  updatePanelHeight('wishPanel');
+}
+
+// 删除愿望
+function deleteWish(index) {
+  if (!confirm('确定要删除这个愿望吗？')) return;
+  wishes.splice(index, 1);
+  saveWishes();
+  renderWishes();
+  updatePanelHeight('wishPanel');
+}
+
+// 勾选完成愿望
+function toggleWishCompleted(index) {
+  wishes[index].completed = !wishes[index].completed;
+  saveWishes();
+  renderWishes();
+  updatePanelHeight('wishPanel');
+}
+
+// 渲染愿望列表
+function renderWishes() {
+  const wishesContainer = document.getElementById('wishItems');
+  if (!wishesContainer) return;
+  wishesContainer.innerHTML = '';
+  if (wishes.length === 0) {
+    wishesContainer.innerHTML = '<div style="text-align:center; padding: 10px; color: #999;">暂无愿望，请添加</div>';
+    return;
+  }
+  wishes.forEach((wish, index) => {
+    const wishItem = document.createElement('div');
+    wishItem.className = `wish-item ${wish.completed ? 'wish-completed' : ''}`;
+    wishItem.innerHTML = `
+      <input type="checkbox" class="wish-checkbox" ${wish.completed ? 'checked' : ''}>
+      <div class="wish-content">
+        <div class="wish-name">${wish.name}</div>
+        <div class="wish-description">${wish.description || ''}</div>
+      </div>
+      <div class="wish-controls">
+        <button class="wish-edit-btn" title="编辑"><i class="fas fa-edit"></i></button>
+        <button class="wish-delete-btn" title="删除"><i class="fas fa-trash"></i></button>
+      </div>
+    `;
+    // 勾选
+    wishItem.querySelector('.wish-checkbox').onclick = () => toggleWishCompleted(index);
+    // 编辑
+    wishItem.querySelector('.wish-edit-btn').onclick = () => editWish(index);
+    // 删除
+    wishItem.querySelector('.wish-delete-btn').onclick = () => deleteWish(index);
+    wishesContainer.appendChild(wishItem);
+  });
+}
