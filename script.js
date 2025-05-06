@@ -18,6 +18,8 @@ let wishes = []; // 添加小狗愿望数组
 let dailyClickReward = 0; // 今日已获得的点击奖励
 const MAX_DAILY_CLICK_REWARD = 20; // 每日点击奖励上限
 let lastClickRewardDate = ''; // 上次获得点击奖励的日期
+// 添加登录身份变量
+let loginIdentity = ''; // 记录登录身份：'puppy' 或 'master'
 
 // 初始化Firebase应用
 let app;
@@ -299,13 +301,49 @@ function checkAndUpdateDays() {
     // 在小狗对话中添加一条关于天数的消息
     const speechBubble = document.getElementById('puppy-speech-bubble');
     if (speechBubble) {
-      speechBubble.textContent = `今天是我们在一起的第 ${accompanyDays} 天啦！`;
+      // 计算从固定起始日期到现在的天数
+      const diffTime = Math.abs(now - startDate);
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      
+      speechBubble.textContent = `今天是我们在一起的第 ${diffDays} 天啦！`;
       speechBubble.style.opacity = "1";
       
       setTimeout(() => {
         speechBubble.style.opacity = "0";
       }, 5000);
     }
+  }
+}
+
+// 添加重置每日任务的函数
+function resetDailyTasks() {
+  const now = new Date();
+  const lastResetKey = 'lastTasksReset';
+  const lastReset = localStorage.getItem(lastResetKey);
+  const today = now.toDateString();
+  
+  // 如果是新的一天（过了午夜）且还没有重置过
+  if (lastReset !== today && now.getHours() >= 0) {
+    console.log("重置每日任务状态...");
+    
+    // 将所有任务标记为未完成
+    let tasksChanged = false;
+    dailyTasks.forEach(task => {
+      if (task.completed) {
+        task.completed = false;
+        tasksChanged = true;
+      }
+    });
+    
+    // 如果有任务状态被改变，保存到数据库
+    if (tasksChanged) {
+      saveDailyTasks();
+      renderDailyTasks();
+      showMessage("每日任务已重置", 3000);
+    }
+    
+    // 记录最后重置时间
+    localStorage.setItem(lastResetKey, today);
   }
 }
 
@@ -867,15 +905,46 @@ window.onload = function() {
       if (password === ADMIN_PASSWORD) {
         // 主人登录
         localStorage.setItem('userRole', 'admin');
+        loginIdentity = 'master';
         loginScreen.style.display = 'none';
+        // 显示欢迎消息
+        if (speechBubble) {
+          speechBubble.textContent = "主人~欢迎回家！";
+          speechBubble.style.opacity = "1";
+          speechBubble.style.color = "#4CAF50"; // 绿色表示欢迎
+          speechBubble.style.backgroundColor = "#E8F5E9"; // 浅绿色背景
+          
+          setTimeout(() => {
+            speechBubble.style.opacity = "0";
+            speechBubble.style.color = ""; 
+            speechBubble.style.backgroundColor = "";
+          }, 5000);
+        }
       } else if (password === PUPPY_PASSWORD) {
         // 小狗登录
         localStorage.setItem('userRole', 'puppy');
+        loginIdentity = 'puppy';
         loginScreen.style.display = 'none';
+        // 显示欢迎消息
+        if (speechBubble) {
+          speechBubble.textContent = "乐乐~欢迎回家！";
+          speechBubble.style.opacity = "1";
+          speechBubble.style.color = "#4CAF50"; // 绿色表示欢迎
+          speechBubble.style.backgroundColor = "#E8F5E9"; // 浅绿色背景
+          
+          setTimeout(() => {
+            speechBubble.style.opacity = "0";
+            speechBubble.style.color = ""; 
+            speechBubble.style.backgroundColor = "";
+          }, 5000);
+        }
       } else {
         // 密码错误
         loginError.textContent = '密码错误，请重试';
         passwordInput.value = '';
+        setTimeout(() => {
+          loginError.textContent = '';
+        }, 3000);
       }
     });
     
@@ -921,9 +990,14 @@ window.onload = function() {
   
   // 检查并更新天数
   checkAndUpdateDays();
+  resetDailyTasks(); // 立即检查一次
   
-  // 设置每小时检查一次是否过了午夜
-  setInterval(checkAndUpdateDays, 60 * 60 * 1000);
+  // 设置定时器，每分钟检查一次
+  setInterval(() => {
+    updateClock();
+    checkAndUpdateDays();
+    resetDailyTasks(); // 检查并重置每日任务
+  }, 60000); // 每分钟检查一次
 
   // 初始化小狗功能
   initPuppy();
@@ -951,12 +1025,11 @@ window.onload = function() {
     console.error('未找到ID为addWishBtn的元素，请检查HTML');
   }
   
-  // 显示管理控制按钮（如果是主人登录）
+  // 显示管理控制按钮（对所有用户都显示）
   const taskAdminControls = document.getElementById('taskAdminControls');
   if (taskAdminControls) {
-    // 检查是否是主人登录
-    const isAdmin = localStorage.getItem('userRole') === 'admin';
-    taskAdminControls.style.display = isAdmin ? 'block' : 'none';
+    // 无论什么角色都显示
+    taskAdminControls.style.display = 'block';
   }
   
   // 根据用户角色添加提示信息
