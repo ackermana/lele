@@ -372,9 +372,9 @@
     <div id="loginScreen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 1000; display: flex; justify-content: center; align-items: center; flex-direction: column;">
         <h1 style="text-align: center; color: var(--primary);">🐾 小狗积分系统 🦴</h1>
         <div class="card" style="width: 300px; max-width: 90%;">
-            <h2>请输入密码</h2>
+            <h2> 请输入密码</h2>
             <div style="margin: 20px 0;">
-                <input type="password" id="passwordInput" placeholder="请输入密码" style="width: 90%; padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #ddd;">
+                <input type="password" id="passwordInput" placeholder="请输入密码" style="width: 90%; padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #ddd; font-size: 16px;">
                 <button id="loginBtn" class="btn login-btn">登录</button>
                 <p id="loginError" style="color: red; font-size: 0.8em;"></p>
             </div>
@@ -393,7 +393,7 @@
         <!-- 添加每日清单卡片 -->
         <div class="card">
             <div class="accordion" onclick="window.togglePanel('dailyTaskPanel')">
-                <h2>🏠 每日家务</h2>
+                <h2>🏠 每日清单</h2>
                 <i class="fas fa-chevron-down"></i>
             </div>
             <div id="dailyTaskPanel" class="panel">
@@ -451,6 +451,7 @@
         <div class="card">
             <div class="accordion" onclick="window.togglePanel('addPanel')">
                 <h2>📈 小狗表现好</h2>
+
                 <i class="fas fa-chevron-down"></i>
             </div>
             <div id="addPanel" class="panel">
