@@ -184,59 +184,43 @@ function loadScore() {
 
 function saveScore() {
   console.log("正在保存数据到 Firebase...");
+  
+  const statusElem = document.createElement('div');
+  // ...状态元素创建逻辑
+  
   try {
-    // 获取当前时间戳
-    const now = Date.now();
-    
-    // 构建完整的更新对象
-    const updates = {
-      'lele/score': score,
-      'lele/log': log.slice(-1000), // 保留最近1000条记录
-      'lele/dailyTasks': dailyTasks,
-      'lele/wishes': wishes,
-      'lele/lastUpdate': now,
-      'lele/dailyClickReward': {
-        date: new Date().toDateString(),
+    // 创建包含所有数据的对象
+    const allData = {
+      score,
+      log,
+      accompanyDays,
+      dailyTasks,
+      wishes,
+      dailyClickReward: {
+        date: lastClickRewardDate,
         amount: dailyClickReward
       }
     };
 
-    // 使用update进行批量更新
-    return update(ref(database), updates)
+    // 使用set方法保存整个对象
+    set(ref(database, 'lele'), allData)
       .then(() => {
-        console.log("数据保存成功!");
+        console.log("所有数据保存成功!");
         // 更新本地缓存
         const cacheData = {
-          score,
-          log,
-          accompanyDays,
-          dailyTasks,
-          wishes,
-          timestamp: now,
-          dailyClickReward: {
-            date: new Date().toDateString(),
-            amount: dailyClickReward
-          }
+          ...allData,
+          timestamp: Date.now()
         };
         localStorage.setItem('puppyAppData', JSON.stringify(cacheData));
-        
-        // 验证本地存储是否成功
-        const storedData = localStorage.getItem('puppyAppData');
-        if (storedData) {
-          console.log("本地缓存更新成功:", JSON.parse(storedData));
-        } else {
-          console.error("本地缓存更新失败");
-        }
+        // 显示成功状态...
       })
       .catch((error) => {
         console.error("保存数据时出错:", error);
-        showMessage("自动保存失败，正在重试...", 3000);
-        // 添加重试逻辑
-        setTimeout(saveScore, 2000);
+        // 显示失败状态...
       });
+
   } catch (error) {
     console.error("保存数据时发生错误:", error);
-    return Promise.reject(error);
   }
 }
 
