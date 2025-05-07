@@ -184,24 +184,25 @@ function loadScore() {
 
 function saveScore() {
   console.log("正在保存数据到 Firebase...");
-  
-  // // 检查用户角色
-  // const userRole = localStorage.getItem('userRole');
-  // if (userRole !== 'admin') {
-  //   console.error("小狗不能保存积分！");
-  //   return;
-  // }
-
   try {
-    // 使用批量更新确保数据一致性
+    // 获取当前时间戳
+    const now = Date.now();
+    
+    // 构建完整的更新对象
     const updates = {
       'lele/score': score,
-      'lele/log': log.slice(-100), // 保留最近100条记录
+      'lele/log': log.slice(-1000), // 保留最近1000条记录
       'lele/dailyTasks': dailyTasks,
-      'lele/wishes': wishes
+      'lele/wishes': wishes,
+      'lele/lastUpdate': now,
+      'lele/dailyClickReward': {
+        date: new Date().toDateString(),
+        amount: dailyClickReward
+      }
     };
 
-    update(ref(database), updates)
+    // 使用update进行批量更新
+    return update(ref(database), updates)
       .then(() => {
         console.log("数据保存成功!");
         // 更新本地缓存
@@ -211,9 +212,21 @@ function saveScore() {
           accompanyDays,
           dailyTasks,
           wishes,
-          timestamp: Date.now()
+          timestamp: now,
+          dailyClickReward: {
+            date: new Date().toDateString(),
+            amount: dailyClickReward
+          }
         };
         localStorage.setItem('puppyAppData', JSON.stringify(cacheData));
+        
+        // 验证本地存储是否成功
+        const storedData = localStorage.getItem('puppyAppData');
+        if (storedData) {
+          console.log("本地缓存更新成功:", JSON.parse(storedData));
+        } else {
+          console.error("本地缓存更新失败");
+        }
       })
       .catch((error) => {
         console.error("保存数据时出错:", error);
@@ -223,6 +236,7 @@ function saveScore() {
       });
   } catch (error) {
     console.error("保存数据时发生错误:", error);
+    return Promise.reject(error);
   }
 }
 
