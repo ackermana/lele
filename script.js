@@ -16,7 +16,7 @@ let dailyTasks = []; // 添加每日任务数组
 let wishes = []; // 添加小狗愿望数组
 // 添加小狗点击奖励相关变量
 let dailyClickReward = 0; // 今日已获得的点击奖励
-const MAX_DAILY_CLICK_REWARD = 20; // 每日点击奖励上限
+const MAX_DAILY_CLICK_REWARD = 25; // 每日点击奖励上限
 let lastClickRewardDate = ''; // 上次获得点击奖励的日期
 // 添加登录身份变量
 let loginIdentity = ''; // 记录登录身份：'puppy' 或 'master'
@@ -617,88 +617,101 @@ function initPuppy() {
     
     // 添加点击事件
     puppy.addEventListener('click', () => {
-      // 检查是否可以获得点击奖励
       const today = new Date().toDateString();
-      
-      // 如果日期变了，重置每日点击奖励计数
       if (lastClickRewardDate !== today) {
         dailyClickReward = 0;
         lastClickRewardDate = today;
       }
-      
-      // 随机消息
-      let randomPhrases = [
-        "汪~",
-        "主人，小狗爱您！",
-        "摸摸小狗有奖励哦~",
-        "摸摸我嘛~",
-        "今天表现好，可以加分吗？",
-        "我会乖乖的~",
-        "主人最好了~",
-        "那可不~",
-        "小狗爱主人！！！",
-        "我不是小猪！！！",
-        "抱抱我嘛~",
-        "我想要亲亲~",
-        "我会一直陪着主人~"
+
+      // 先判断是否触发奖励（20%概率）
+      const rewardProb = 0.2;
+      const rewardTriggered = Math.random() < rewardProb;
+
+      // 奖励分数分布
+      const rewardChances = [
+        { points: 1, prob: 0.3 },
+        { points: 2, prob: 0.3 },
+        { points: 3, prob: 0.25 },
+        { points: 5, prob: 0.1 },
+        { points: 10, prob: 0.05 },
       ];
-      
-      // 修改这部分逻辑：只有在尝试获取奖励且已达上限时才显示特殊消息
-      let isRewardAttempt = true; // 默认认为是尝试获取奖励
-      
-      if (dailyClickReward < MAX_DAILY_CLICK_REWARD) {
-        // 如果未达到上限，给予奖励
-        dailyClickReward++;
-        score++;
-        log.push({
-          time: Date.now(),
-          action: "摸摸小狗奖励",
-          points: 1
-        });
-        saveScore();
-        saveDailyClickReward();
-        
-        // 显示随机消息
-        if (speechBubble) {
-          speechBubble.textContent = randomPhrases[Math.floor(Math.random() * randomPhrases.length)];
-          speechBubble.style.opacity = "1";
-          
-          setTimeout(() => {
-            speechBubble.style.opacity = "0";
-          }, 3000);
+      // 计算累计概率
+      function getRandomReward() {
+        const r = Math.random();
+        let acc = 0;
+        for (let i = 0; i < rewardChances.length; i++) {
+          acc += rewardChances[i].prob;
+          if (r < acc) return rewardChances[i].points;
         }
-      } else if (isRewardAttempt) {
-        // 如果已达到上限且尝试获取奖励，显示特殊消息
-        const specialPhrases = [
-          "今天的奖励已经领完啦~",
-          "明天再来找我玩吧~",
-          "小狗累了，需要休息~",
-          "主人明天再来摸我吧~",
-          "今天的运气用完了~"
-        ];
-        
-        if (speechBubble) {
-          speechBubble.textContent = specialPhrases[Math.floor(Math.random() * specialPhrases.length)];
-          speechBubble.style.opacity = "1";
-          
-          setTimeout(() => {
-            speechBubble.style.opacity = "0";
-          }, 3000);
+        // 理论上不会到这里
+        return 1;
+      }
+
+      if (rewardTriggered) {
+        if (dailyClickReward < MAX_DAILY_CLICK_REWARD) {
+          const rewardPoints = getRandomReward();
+          let add = Math.min(rewardPoints, MAX_DAILY_CLICK_REWARD - dailyClickReward);
+          score += add;
+          dailyClickReward += add;
+          saveDailyClickReward();
+          log.push({
+            time: Date.now(),
+            action: `小狗点击奖励`,
+            points: add
+          });
+          saveScore();
+          updateDisplay();
+          showSpecialMessage(add);
+          updatePuppyState(add);
+        } else {
+          // 达到上限，显示多种特殊消息
+          const upperLimitMessages = [
+            "今天的奖励已经领完啦，明天再来吧！",
+            "奖励已经发完了，明天继续努力哦~",
+            "乐乐，今天不能再领奖励啦！",
+            "汪~今天的奖励额度用光啦，明天见！",
+            "奖励上限已达成，明天再摸我吧~",
+            "小狗奖励已经满啦，明天还可以继续哦！"
+          ];
+          if (speechBubble) {
+            speechBubble.textContent = upperLimitMessages[Math.floor(Math.random() * upperLimitMessages.length)];
+            speechBubble.style.color = "#F44336";
+            speechBubble.style.backgroundColor = "#FFEBEE";
+            speechBubble.style.opacity = "1";
+            setTimeout(() => {
+              speechBubble.style.opacity = "0";
+            }, 4000);
+          }
+          updatePuppyState(0);
         }
       } else {
-        // 如果已达到上限但不是尝试获取奖励，仍显示普通随机消息
+        // 未中奖，显示普通消息
+        let randomPhrases = [
+          "汪~",
+          "主人，小狗爱您！",
+          "摸摸小狗有奖励哦~",
+          "摸摸我嘛~",
+          "今天表现好，可以加分吗？",
+          "我会乖乖的~",
+          "主人最好了~",
+          "那可不~",
+          "小狗爱主人！！！",
+          "我不是小猪！！！",
+          "抱抱我嘛~",
+          "我想要亲亲~",
+          "我会一直陪着主人~"
+        ];
         if (speechBubble) {
           speechBubble.textContent = randomPhrases[Math.floor(Math.random() * randomPhrases.length)];
+          speechBubble.style.color = "";
+          speechBubble.style.backgroundColor = "";
           speechBubble.style.opacity = "1";
-          
           setTimeout(() => {
             speechBubble.style.opacity = "0";
-          }, 3000);
+          }, 4000);
         }
+        updatePuppyState(0);
       }
-      
-      // 更新小狗状态
-      updatePuppyState(1);
     });
     
     // 确保小狗元素可见
