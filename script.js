@@ -1,4 +1,4 @@
-// 导入Firebase相关模块
+console.log// 导入Firebase相关模块
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
 import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
@@ -185,48 +185,41 @@ function loadScore() {
 function saveScore() {
   console.log("正在保存数据到 Firebase...");
   
+  // // 检查用户角色
+  // const userRole = localStorage.getItem('userRole');
+  // if (userRole !== 'admin') {
+  //   console.error("小狗不能保存积分！");
+  //   return;
+  // }
+
   try {
-    // 添加状态指示
-    const statusElem = document.createElement('div');
-    statusElem.id = 'saveStatus';
-    statusElem.style.position = 'fixed';
-    statusElem.style.bottom = '10px';
-    statusElem.style.right = '10px';
-    statusElem.style.padding = '5px 10px';
-    statusElem.style.background = '#ffe6e6';
-    statusElem.style.borderRadius = '5px';
-    statusElem.style.fontSize = '12px';
-    statusElem.textContent = '正在保存...';
-    document.body.appendChild(statusElem);
-    
-    set(ref(database, 'lele/score'), score)
+    // 使用批量更新确保数据一致性
+    const updates = {
+      'lele/score': score,
+      'lele/log': log.slice(-100), // 保留最近100条记录
+      'lele/dailyTasks': dailyTasks,
+      'lele/wishes': wishes
+    };
+
+    update(ref(database), updates)
       .then(() => {
-        console.log("积分保存成功!");
-        statusElem.style.background = '#e6ffe6';
-        statusElem.textContent = '保存成功!';
-        setTimeout(() => {
-          if (document.body.contains(statusElem)) {
-            document.body.removeChild(statusElem);
-          }
-        }, 2000);
+        console.log("数据保存成功!");
+        // 更新本地缓存
+        const cacheData = {
+          score,
+          log,
+          accompanyDays,
+          dailyTasks,
+          wishes,
+          timestamp: Date.now()
+        };
+        localStorage.setItem('puppyAppData', JSON.stringify(cacheData));
       })
       .catch((error) => {
-        console.error("保存积分时出错:", error);
-        statusElem.style.background = '#ffe6e6';
-        statusElem.textContent = '保存失败!';
-        setTimeout(() => {
-          if (document.body.contains(statusElem)) {
-            document.body.removeChild(statusElem);
-          }
-        }, 2000);
-      });
-      
-    set(ref(database, 'lele/log'), log)
-      .then(() => {
-        console.log("日志保存成功!");
-      })
-      .catch((error) => {
-        console.error("保存日志时出错:", error);
+        console.error("保存数据时出错:", error);
+        showMessage("自动保存失败，正在重试...", 3000);
+        // 添加重试逻辑
+        setTimeout(saveScore, 2000);
       });
   } catch (error) {
     console.error("保存数据时发生错误:", error);
@@ -377,15 +370,26 @@ function resetDailyTasks() {
 function updateDisplay() {
   document.getElementById('totalScore').textContent = `当前积分：${score}`;
   document.getElementById('log').innerHTML = log
-    .slice(-10).reverse().map(entry => 
+    .slice(-100).reverse().map(entry => 
       `<div class="log-entry">
         <div class="log-time">${new Date(entry.time).toLocaleDateString()} ${new Date(entry.time).toLocaleTimeString()}</div>
         <div class="log-content">
           <span class="log-action">${entry.action}</span>
-          <span class="badge ${entry.action.includes('兑换') ? 'badge-store' : entry.points > 0 ? 'badge-add' : 'badge-deduct'}">${entry.points > 0 ? '+' : ''}${entry.points}</span>
+          <span class="badge ${getBadgeClass(entry)}">${entry.points > 0 ? '+' : ''}${entry.points}</span>
         </div>
       </div>`
     ).join('');
+    
+  // 辅助函数，根据日志条目确定徽章类型
+  function getBadgeClass(entry) {
+    if (entry.action.includes('兑换') || entry.action.includes('商店')) {
+      return 'badge-store';
+    } else if (entry.points > 0) {
+      return 'badge-add';
+    } else {
+      return 'badge-deduct';
+    }
+  }
 }
 
 function updateDaysDisplay() {
@@ -780,7 +784,6 @@ function updatePuppyState(points) {
 }
 
 // ==================== 事件处理函数 ====================
-
 function createButton(type, item) {
   const btn = document.createElement('button');
   btn.className = `btn ${type}-btn`;
@@ -808,42 +811,178 @@ function createButton(type, item) {
     return btn;
   }
   
+  // 只有当不是小狗角色时，才添加正常的点击事件处理
   btn.onclick = () => {
     // 处理自定义记录功能
     if (item.isCustomRecord) {
-      const customText = prompt("请输入要记录的内容：");
-      if (customText && customText.trim() !== "") {
-        const points = 0; // 自定义记录不增减积分
-        log.push({time: Date.now(), action: `记录: ${customText}`, points});
-        saveScore();
-        updateDisplay();
-        showMessage("记录已保存！", 3000);
-      }
-      return;
+        const customText = prompt("请输入要记录的内容：");
+        if (customText && customText.trim() !== "") {
+            const points = 0;
+            log.push({time: Date.now(), action: `记录: ${customText}`, points});
+            saveScore();
+            updateDisplay();
+            showMessage("记录已保存！", 3000);
+        }
+        return;
     }
     
     let points = 0;
+    let success = true;
+    let actionText = '';
+    
     if(type === 'store') {
       if(score >= item.cost) {
         points = -item.cost;
         score += points;
-        log.push({time: Date.now(), action: `兑换 ${item.name}`, points});
+        actionText = `兑换商店项目: ${item.name}`;
+        log.push({time: Date.now(), action: actionText, points});
         saveScore();
         showSpecialMessage(points);
         updatePuppyState(points);
+      } else {
+        // 积分不足
+        success = false;
+        alert(`积分不足，无法兑换 ${item.name}！还需要 ${item.cost - score} 分`);
       }
     } else {
       points = type === 'add' ? item.points : -item.points;
       score += points;
-      log.push({time: Date.now(), action: item.name, points});
+      actionText = type === 'add' ? `加分项目: ${item.name}` : `扣分项目: ${item.name}`;
+      
+      // 添加到历史记录
+      log.push({
+        time: Date.now(),
+        action: actionText,
+        points: points
+      });
+      
+      // 保存更新后的数据
       saveScore();
+      updateDisplay(); // 确保立即更新显示
       showSpecialMessage(points);
       updatePuppyState(points);
     }
-    updateDisplay();
+    
+    // 只有操作成功才更新显示
+    if (success) {
+      updateDisplay();
+      
+      // 添加本地备份
+      try {
+        const cacheData = {
+          score,
+          log,
+          accompanyDays,
+          dailyTasks,
+          wishes,
+          timestamp: Date.now()
+        };
+        localStorage.setItem('puppyAppData', JSON.stringify(cacheData));
+      } catch (error) {
+        console.error("缓存数据到本地存储失败:", error);
+      }
+    }
   };
   return btn;
 }
+
+// 在登录成功后初始化按钮
+function initializeButtons() {
+  const userRole = localStorage.getItem('userRole');
+  const deductionsContainer = document.getElementById('deductions');
+  const additionsContainer = document.getElementById('additions');
+  const storeContainer = document.getElementById('store');
+  
+  // 清空现有按钮
+  deductionsContainer.innerHTML = '';
+  additionsContainer.innerHTML = '';
+  storeContainer.innerHTML = '';
+  
+  // 根据用户角色初始化按钮
+  if (userRole === 'admin') {
+    // 管理员可以看到所有按钮并正常使用
+    initializeDeductions();
+    initializeAdditions();
+    initializeStore();
+  } else if (userRole === 'puppy') {
+    // 小狗只能看到按钮但不能点击
+    initializeDeductionsForPuppy();
+    initializeAdditionsForPuppy();
+    initializeStoreForPuppy();
+  }
+}
+
+// 为小狗初始化扣分按钮（只读）
+function initializeDeductionsForPuppy() {
+  const container = document.getElementById('deductions');
+  deductionItems.forEach(item => {
+    const btn = document.createElement('button');
+    btn.className = 'btn deduct-btn';
+    btn.innerHTML = `${item.name} <span class="badge">-${item.points}</span>`;
+    btn.disabled = true;
+    btn.addEventListener('click', () => {
+      showMessage('小狗不能自己扣分哦！', 2000);
+    });
+    container.appendChild(btn);
+  });
+}
+
+// 为小狗初始化加分按钮（只读）
+function initializeAdditionsForPuppy() {
+  const container = document.getElementById('additions');
+  additionItems.forEach(item => {
+    const btn = document.createElement('button');
+    btn.className = 'btn add-btn';
+    btn.innerHTML = `${item.name} <span class="badge">+${item.points}</span>`;
+    btn.disabled = true;
+    btn.addEventListener('click', () => {
+      showMessage('小狗不能自己加分哦！', 2000);
+    });
+    container.appendChild(btn);
+  });
+}
+
+// 为小狗初始化商店按钮（只读）
+function initializeStoreForPuppy() {
+  const container = document.getElementById('store');
+  storeItems.forEach(item => {
+    const btn = document.createElement('button');
+    btn.className = 'btn store-btn';
+    btn.innerHTML = `${item.name} <span class="badge">-${item.points}</span>`;
+    btn.disabled = true;
+    btn.addEventListener('click', () => {
+      showMessage('小狗不能自己使用商店哦！', 2000);
+    });
+    container.appendChild(btn);
+  });
+}
+
+// 修改登录处理函数
+loginBtn.addEventListener('click', function() {
+  const password = passwordInput.value;
+  let userRole = '';
+  
+  if (password === ADMIN_PASSWORD) {
+    userRole = 'admin';
+  } else if (password === PUPPY_PASSWORD) {
+    userRole = 'puppy';
+  } else {
+    loginError.textContent = '密码错误！';
+    return;
+  }
+  
+  // 保存用户角色
+  localStorage.setItem('userRole', userRole);
+  
+  // 隐藏登录界面
+  loginScreen.style.display = 'none';
+  
+  // 初始化按钮
+  initializeButtons();
+  
+  // 加载数据
+  loadScore();
+});
 
 // 面板切换函数
 function togglePanel(panelId) {
@@ -900,6 +1039,7 @@ const rules = {
 
 // 页面加载完成后初始化
 window.onload = function() {
+
   // 初始化所有按钮
   Object.keys(rules).forEach(type => {
     const container = document.getElementById(type === 'store' ? 'store' : type);
@@ -911,6 +1051,7 @@ window.onload = function() {
     });
   });
 
+  
   // 在页面加载时检查登录状态
   const isLoggedIn = localStorage.getItem('isLoggedIn');
   if (isLoggedIn === 'true') {
