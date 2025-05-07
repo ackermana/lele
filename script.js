@@ -8,7 +8,7 @@ import { firebaseConfig, ADMIN_PASSWORD, PUPPY_PASSWORD } from './config.js';
 // ==================== 全局变量 ====================
 let score = 0; // 当前积分
 let log = []; // 操作日志
-let accompanyDays = 51; // 初始天数设置为51天
+let accompanyDays = 1; // 初始天数设置为51天
 let speechBubble = null; // 用于存储对话气泡元素的引用
 let startDate = new Date('2025-03-14T12:00:00'); // 设置为2025年3月14日中午12点
 // 在全局变量部分添加
@@ -55,106 +55,131 @@ function saveDays() {
   }
 }
 
-// 在 loadScore 函数中添加加载愿望的代码
-function loadScore() {
-  console.log("正在从 Firebase 加载数据...");
+// 添加一个新函数，一次性获取所有数据
+function loadAllData() {
+  console.log("正在一次性加载所有数据...");
   
-  // 添加加载状态指示
-  document.getElementById('totalScore').textContent = `当前积分：加载中...`;
-  document.getElementById('log').innerHTML = '<div style="text-align:center">加载中...</div>';
+  // 显示加载指示器
+  const loadingIndicator = document.createElement('div');
+  loadingIndicator.className = 'loading-overlay';
+  loadingIndicator.innerHTML = '<div class="loading-spinner"></div>';
+  document.body.appendChild(loadingIndicator);
   
+  // 先尝试从本地缓存加载
   try {
-    // 加载积分
-    const scoreRef = ref(database, 'lele/score');
-    onValue(scoreRef, (snapshot) => {
-      const val = snapshot.val();
-      console.log("加载到积分:", val);
-      score = val || 0;
-      updateDisplay();
-    }, (error) => {
-      console.error("读取积分时出错:", error);
-      document.getElementById('totalScore').textContent = `当前积分：${score} (加载失败，请刷新页面)`;
-    });
-    
-    // 加载日志
-    const logRef = ref(database, 'lele/log');
-    onValue(logRef, (snapshot) => {
-      const val = snapshot.val();
-      console.log("加载到日志:", val);
-      log = val || [];
-      updateDisplay();
-    }, (error) => {
-      console.error("读取日志时出错:", error);
-      document.getElementById('log').innerHTML = '<div style="color:red">日志加载失败</div>';
-    });
-    
-    // 加载陪伴天数
-    const daysRef = ref(database, 'lele/accompanyDays');
-    onValue(daysRef, (snapshot) => {
-      const val = snapshot.val();
-      console.log("加载到陪伴天数:", val);
-      if (val) {
-        accompanyDays = val;
+    const cachedData = localStorage.getItem('puppyAppData');
+    if (cachedData) {
+      const data = JSON.parse(cachedData);
+      const cacheTime = data.timestamp || 0;
+      const now = Date.now();
+      
+      // 如果缓存不超过5分钟，直接使用缓存数据
+      if (now - cacheTime < 5 * 60 * 1000) {
+        console.log("使用本地缓存数据");
+        score = data.score || 0;
+        log = data.log || [];
+        accompanyDays = data.accompanyDays || 51;
+        dailyTasks = data.dailyTasks || [];
+        wishes = data.wishes || [];
+        
+        // 更新界面
+        updateDisplay();
+        updateDaysDisplay();
+        renderDailyTasks();
+        renderWishes();
+        
+        // 隐藏加载指示器
+        document.body.removeChild(loadingIndicator);
+        
+        // 在后台仍然加载最新数据
+        loadFromFirebase(false);
+        return;
       }
-      updateDaysDisplay();
-    }, (error) => {
-      console.error("读取陪伴天数时出错:", error);
-    });
+    }
+  } catch (error) {
+    console.error("读取本地缓存失败:", error);
+  }
+  
+  // 如果没有可用缓存，从Firebase加载
+  loadFromFirebase(true);
+  
+  function loadFromFirebase(showLoading) {
+    // 获取根引用
+    const rootRef = ref(database, 'lele');
     
-    // 加载每日任务
-    const tasksRef = ref(database, 'lele/dailyTasks');
-    onValue(tasksRef, (snapshot) => {
-      const val = snapshot.val();
-      console.log("加载到每日任务:", val);
-      dailyTasks = val || [];
-      renderDailyTasks();
-    }, (error) => {
-      console.error("读取每日任务时出错:", error);
-    });
-    
-    // 加载小狗愿望
-    const wishesRef = ref(database, 'lele/wishes');
-    onValue(wishesRef, (snapshot) => {
-      const val = snapshot.val();
-      console.log("加载到小狗愿望:", val);
-      wishes = val || [];
-      renderWishes();
-    }, (error) => {
-      console.error("读取小狗愿望时出错:", error);
-    });
-    
-    // 加载每日点击奖励数据
-    const clickRewardRef = ref(database, 'lele/dailyClickReward');
-    onValue(clickRewardRef, (snapshot) => {
-      const val = snapshot.val();
-      console.log("加载到每日点击奖励数据:", val);
-      if (val) {
-        // 检查是否是今天的数据
+    onValue(rootRef, (snapshot) => {
+      const data = snapshot.val() || {};
+      
+      // 更新所有数据
+      score = data.score || 0;
+      log = data.log || [];
+      accompanyDays = data.accompanyDays || 51;
+      dailyTasks = data.dailyTasks || [];
+      wishes = data.wishes || [];
+      
+      // 处理每日点击奖励
+      const clickRewardData = data.dailyClickReward;
+      if (clickRewardData) {
         const today = new Date().toDateString();
-        if (val.date === today) {
-          dailyClickReward = val.amount || 0;
-          lastClickRewardDate = val.date;
+        if (clickRewardData.date === today) {
+          dailyClickReward = clickRewardData.amount || 0;
+          lastClickRewardDate = clickRewardData.date;
         } else {
-          // 如果不是今天的数据，重置为0
           dailyClickReward = 0;
           lastClickRewardDate = today;
-          // 保存新的数据到Firebase
           saveDailyClickReward();
         }
       } else {
-        // 如果没有数据，初始化为0
         dailyClickReward = 0;
         lastClickRewardDate = new Date().toDateString();
         saveDailyClickReward();
       }
+      
+      // 更新界面
+      updateDisplay();
+      updateDaysDisplay();
+      renderDailyTasks();
+      renderWishes();
+      
+      // 缓存数据到本地存储
+      try {
+        const cacheData = {
+          score,
+          log,
+          accompanyDays,
+          dailyTasks,
+          wishes,
+          timestamp: Date.now()
+        };
+        localStorage.setItem('puppyAppData', JSON.stringify(cacheData));
+      } catch (error) {
+        console.error("缓存数据到本地存储失败:", error);
+      }
+      
+      // 隐藏加载指示器
+      if (showLoading && document.body.contains(loadingIndicator)) {
+        document.body.removeChild(loadingIndicator);
+      }
+      
     }, (error) => {
-      console.error("读取每日点击奖励数据时出错:", error);
+      console.error("从Firebase加载数据失败:", error);
+      
+      // 隐藏加载指示器
+      if (showLoading && document.body.contains(loadingIndicator)) {
+        document.body.removeChild(loadingIndicator);
+      }
+      
+      // 显示错误信息
+      document.getElementById('totalScore').textContent = `当前积分：${score} (加载失败)`;
+      document.getElementById('log').innerHTML = '<div style="color:red">数据加载失败，请刷新页面重试</div>';
     });
-  } catch (error) {
-    console.error("加载数据时发生错误:", error);
-    document.getElementById('totalScore').textContent = `当前积分：${score} (加载失败)`;
-    document.getElementById('log').innerHTML = '<div style="color:red">数据加载失败，请刷新页面重试</div>';
   }
+}
+
+// 保留原来的loadScore函数以兼容旧代码
+function loadScore() {
+  console.log("使用新的数据加载方法...");
+  loadAllData();
 }
 
 function saveScore() {
@@ -418,8 +443,10 @@ function renderDailyTasks() {
         <div class="task-points">完成可得 +${task.points} 分</div>
       </div>
       <div class="task-controls">
-        <button class="task-edit-btn"><i class="fas fa-edit"></i></button>
-        <button class="task-delete-btn"><i class="fas fa-trash"></i></button>
+        <button class="move-btn ${index === 0 ? 'disabled' : ''}" title="上移" ${index === 0 ? 'disabled' : ''}><i class="fas fa-arrow-up"></i></button>
+        <button class="move-btn ${index === dailyTasks.length - 1 ? 'disabled' : ''}" title="下移" ${index === dailyTasks.length - 1 ? 'disabled' : ''}><i class="fas fa-arrow-down"></i></button>
+        <button class="task-edit-btn" title="编辑"><i class="fas fa-edit"></i></button>
+        <button class="task-delete-btn" title="删除"><i class="fas fa-trash"></i></button>
       </div>
     `;
     
@@ -457,6 +484,22 @@ function renderDailyTasks() {
       saveDailyTasks(); // 确保任务状态变更后保存到Firebase
       taskItem.classList.toggle('task-completed', task.completed);
       updateDisplay();
+    });
+    
+    // 添加上移按钮事件
+    const moveUpBtn = taskItem.querySelectorAll('.move-btn')[0];
+    moveUpBtn.addEventListener('click', () => {
+      if (index > 0) {
+        moveTask(index, 'up');
+      }
+    });
+    
+    // 添加下移按钮事件
+    const moveDownBtn = taskItem.querySelectorAll('.move-btn')[1];
+    moveDownBtn.addEventListener('click', () => {
+      if (index < dailyTasks.length - 1) {
+        moveTask(index, 'down');
+      }
     });
     
     // 添加编辑按钮事件
@@ -600,17 +643,22 @@ function initPuppy() {
         "我会一直陪着主人~"
       ];
       
-      // 检查是否已达到每日点击奖励上限
-      if (dailyClickReward >= MAX_DAILY_CLICK_REWARD) {
-        // 如果已达到上限，显示特殊消息
-        randomPhrases = [
-          "今天的奖励已经领完啦~",
-          "明天再来找我玩吧~",
-          "小狗累了，需要休息~",
-          "主人明天再来摸我吧~",
-          "今天的运气用完了~"
-        ];
+      // 修改这部分逻辑：只有在尝试获取奖励且已达上限时才显示特殊消息
+      let isRewardAttempt = true; // 默认认为是尝试获取奖励
+      
+      if (dailyClickReward < MAX_DAILY_CLICK_REWARD) {
+        // 如果未达到上限，给予奖励
+        dailyClickReward++;
+        score++;
+        log.push({
+          time: Date.now(),
+          action: "摸摸小狗奖励",
+          points: 1
+        });
+        saveScore();
+        saveDailyClickReward();
         
+        // 显示随机消息
         if (speechBubble) {
           speechBubble.textContent = randomPhrases[Math.floor(Math.random() * randomPhrases.length)];
           speechBubble.style.opacity = "1";
@@ -619,80 +667,38 @@ function initPuppy() {
             speechBubble.style.opacity = "0";
           }, 3000);
         }
-        return;
-      }
-      
-      // 20%的概率获得奖励
-      if (Math.random() < 0.22) {
-        // 获得1、2、3、5、10分，每种概率都为0.2
-        const randomValue = Math.random();
-        let rewardPoints;
-        
-        if (randomValue < 0.25) {
-          rewardPoints = 1;
-        } else if (randomValue < 0.5) {
-          rewardPoints = 2;
-        } else if (randomValue < 0.75) {
-          rewardPoints = 3;
-        } else if (randomValue < 0.9) {
-          rewardPoints = 5;
-        } else {
-          rewardPoints = 10;
-        }
-        
-        // 更新积分和日志
-        score += rewardPoints;
-        dailyClickReward += rewardPoints;
-        
-        // 添加到日志
-        log.push({
-          action: `摸摸小狗获得奖励`,
-          points: rewardPoints,
-          time: Date.now()
-        });
-        
-        // 保存数据
-        saveScore();
-        saveDailyClickReward();
-        
-        // 更新显示
-        updateDisplay();
-        
-        // 显示奖励消息
-        const rewardMessages = [
-          `哇！小狗获得了${rewardPoints}分奖励！`,
-          `好开心！小狗得到${rewardPoints}分！`,
-          `汪汪！主人奖励${rewardPoints}分！`,
-          `摸摸有奖励！${rewardPoints}分到手啦！`,
-          `今天运气真好！获得${rewardPoints}分！`
+      } else if (isRewardAttempt) {
+        // 如果已达到上限且尝试获取奖励，显示特殊消息
+        const specialPhrases = [
+          "今天的奖励已经领完啦~",
+          "明天再来找我玩吧~",
+          "小狗累了，需要休息~",
+          "主人明天再来摸我吧~",
+          "今天的运气用完了~"
         ];
         
         if (speechBubble) {
-          speechBubble.textContent = rewardMessages[Math.floor(Math.random() * rewardMessages.length)];
-          speechBubble.style.color = "#4CAF50"; // 绿色表示加分
-          speechBubble.style.backgroundColor = "#E8F5E9"; // 浅绿色背景
+          speechBubble.textContent = specialPhrases[Math.floor(Math.random() * specialPhrases.length)];
           speechBubble.style.opacity = "1";
           
           setTimeout(() => {
             speechBubble.style.opacity = "0";
-            speechBubble.style.color = ""; 
-            speechBubble.style.backgroundColor = "";
-          }, 6000);
+          }, 3000);
         }
-        
-        // 更新小狗状态
-        updatePuppyState(rewardPoints);
       } else {
-        // 没有获得奖励，显示普通消息
+        // 如果已达到上限但不是尝试获取奖励，仍显示普通随机消息
         if (speechBubble) {
           speechBubble.textContent = randomPhrases[Math.floor(Math.random() * randomPhrases.length)];
           speechBubble.style.opacity = "1";
           
           setTimeout(() => {
             speechBubble.style.opacity = "0";
-          }, 6000);
+          }, 3000);
         }
       }
+      
+      // 更新小狗状态
+      updatePuppyState(1);
     });
     
     // 确保小狗元素可见
@@ -991,8 +997,8 @@ window.onload = function() {
   
   document.body.appendChild(logoutBtn);
 
-  // 加载Firebase数据
-  loadScore();
+  // 加载Firebase数据 - 替换为新的加载函数
+  loadAllData();
   
   // 初始化天数显示
   updateDaysDisplay();
@@ -1024,7 +1030,6 @@ window.onload = function() {
     console.error('未找到ID为addTaskBtn的元素，请检查HTML');
   }
   
-
   // 添加这段代码：为添加愿望按钮添加事件监听器
   const addWishBtn = document.getElementById('addWishBtn');
   if (addWishBtn) {
@@ -1134,6 +1139,38 @@ function deleteWish(index) {
   updatePanelHeight('wishPanel');
 }
 
+// 添加移动任务的函数
+function moveTask(index, direction) {
+  if (direction === 'up' && index > 0) {
+    // 向上移动
+    [dailyTasks[index], dailyTasks[index-1]] = [dailyTasks[index-1], dailyTasks[index]];
+    saveDailyTasks();
+    renderDailyTasks();
+  } else if (direction === 'down' && index < dailyTasks.length - 1) {
+    // 向下移动
+    [dailyTasks[index], dailyTasks[index+1]] = [dailyTasks[index+1], dailyTasks[index]];
+    saveDailyTasks();
+    renderDailyTasks();
+  }
+  updatePanelHeight('dailyTaskPanel');
+}
+
+// 添加移动愿望的函数
+function moveWish(index, direction) {
+  if (direction === 'up' && index > 0) {
+    // 向上移动
+    [wishes[index], wishes[index-1]] = [wishes[index-1], wishes[index]];
+    saveWishes();
+    renderWishes();
+  } else if (direction === 'down' && index < wishes.length - 1) {
+    // 向下移动
+    [wishes[index], wishes[index+1]] = [wishes[index+1], wishes[index]];
+    saveWishes();
+    renderWishes();
+  }
+  updatePanelHeight('wishPanel');
+}
+
 // 勾选完成愿望
 function toggleWishCompleted(index) {
   wishes[index].completed = !wishes[index].completed;
@@ -1161,12 +1198,31 @@ function renderWishes() {
         <div class="wish-description">${wish.description || ''}</div>
       </div>
       <div class="wish-controls">
+        <button class="move-btn ${index === 0 ? 'disabled' : ''}" title="上移" ${index === 0 ? 'disabled' : ''}><i class="fas fa-arrow-up"></i></button>
+        <button class="move-btn ${index === wishes.length - 1 ? 'disabled' : ''}" title="下移" ${index === wishes.length - 1 ? 'disabled' : ''}><i class="fas fa-arrow-down"></i></button>
         <button class="wish-edit-btn" title="编辑"><i class="fas fa-edit"></i></button>
         <button class="wish-delete-btn" title="删除"><i class="fas fa-trash"></i></button>
       </div>
     `;
     // 勾选
     wishItem.querySelector('.wish-checkbox').onclick = () => toggleWishCompleted(index);
+    
+    // 添加上移按钮事件
+    const moveUpBtn = wishItem.querySelectorAll('.move-btn')[0];
+    moveUpBtn.addEventListener('click', () => {
+      if (index > 0) {
+        moveWish(index, 'up');
+      }
+    });
+    
+    // 添加下移按钮事件
+    const moveDownBtn = wishItem.querySelectorAll('.move-btn')[1];
+    moveDownBtn.addEventListener('click', () => {
+      if (index < wishes.length - 1) {
+        moveWish(index, 'down');
+      }
+    });
+    
     // 编辑
     wishItem.querySelector('.wish-edit-btn').onclick = () => editWish(index);
     // 删除
@@ -1175,113 +1231,3 @@ function renderWishes() {
   });
 }
 
-// 移动任务项的函数
-function moveTask(taskId, direction) {
-  const taskList = document.getElementById('dailyTasks');
-  const taskItems = Array.from(taskList.getElementsByClassName('task-item'));
-  const currentTask = taskItems.find(item => item.dataset.taskId === taskId);
-  const currentIndex = taskItems.indexOf(currentTask);
-  
-  if (direction === 'up' && currentIndex > 0) {
-      taskList.insertBefore(currentTask, taskItems[currentIndex - 1]);
-      updateTasksOrder();
-  } else if (direction === 'down' && currentIndex < taskItems.length - 1) {
-      taskList.insertBefore(taskItems[currentIndex + 1], currentTask);
-      updateTasksOrder();
-  }
-  
-  // 更新按钮状态
-  updateMoveButtons();
-}
-
-// 移动愿望项的函数
-function moveWish(wishId, direction) {
-  const wishList = document.getElementById('wishItems');
-  const wishItems = Array.from(wishList.getElementsByClassName('wish-item'));
-  const currentWish = wishItems.find(item => item.dataset.wishId === wishId);
-  const currentIndex = wishItems.indexOf(currentWish);
-  
-  if (direction === 'up' && currentIndex > 0) {
-      wishList.insertBefore(currentWish, wishItems[currentIndex - 1]);
-      updateWishesOrder();
-  } else if (direction === 'down' && currentIndex < wishItems.length - 1) {
-      wishList.insertBefore(wishItems[currentIndex + 1], currentWish);
-      updateWishesOrder();
-  }
-  
-  // 更新按钮状态
-  updateMoveButtons();
-}
-
-// 更新移动按钮状态
-function updateMoveButtons() {
-  // 更新任务项的按钮状态
-  const taskItems = Array.from(document.getElementsByClassName('task-item'));
-  taskItems.forEach((item, index) => {
-      const upBtn = item.querySelector('.move-up-btn');
-      const downBtn = item.querySelector('.move-down-btn');
-      
-      upBtn.classList.toggle('disabled', index === 0);
-      downBtn.classList.toggle('disabled', index === taskItems.length - 1);
-  });
-  
-  // 更新愿望项的按钮状态
-  const wishItems = Array.from(document.getElementsByClassName('wish-item'));
-  wishItems.forEach((item, index) => {
-      const upBtn = item.querySelector('.move-up-btn');
-      const downBtn = item.querySelector('.move-down-btn');
-      
-      upBtn.classList.toggle('disabled', index === 0);
-      downBtn.classList.toggle('disabled', index === wishItems.length - 1);
-  });
-}
-
-// 更新任务顺序到数据库
-function updateTasksOrder() {
-  const taskItems = Array.from(document.getElementsByClassName('task-item'));
-  const taskOrder = taskItems.map(item => item.dataset.taskId);
-  
-  // 更新到Firebase数据库
-  const tasksRef = ref(db, 'tasks');
-  update(tasksRef, { order: taskOrder });
-}
-
-// 更新愿望顺序到数据库
-function updateWishesOrder() {
-  const wishItems = Array.from(document.getElementsByClassName('wish-item'));
-  const wishOrder = wishItems.map(item => item.dataset.wishId);
-  
-  // 更新到Firebase数据库
-  const wishesRef = ref(db, 'wishes');
-  update(wishesRef, { order: wishOrder });
-}
-
-// ... existing code ...
-
-// 在渲染任务和愿望项时添加移动按钮的事件监听器
-function renderTaskItem(task) {
-  // ... existing code ...
-  
-  // 添加移动按钮的点击事件
-  const upBtn = taskElement.querySelector('.move-up-btn');
-  const downBtn = taskElement.querySelector('.move-down-btn');
-  
-  upBtn.addEventListener('click', () => moveTask(task.id, 'up'));
-  downBtn.addEventListener('click', () => moveTask(task.id, 'down'));
-}
-
-function renderWishItem(wish) {
-  // ... existing code ...
-  
-  // 添加移动按钮的点击事件
-  const upBtn = wishElement.querySelector('.move-up-btn');
-  const downBtn = wishElement.querySelector('.move-down-btn');
-  
-  upBtn.addEventListener('click', () => moveWish(wish.id, 'up'));
-  downBtn.addEventListener('click', () => moveWish(wish.id, 'down'));
-}
-
-// 在页面加载完成后初始化移动按钮状态
-document.addEventListener('DOMContentLoaded', () => {
-  updateMoveButtons();
-});
