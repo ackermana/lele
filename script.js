@@ -1,6 +1,5 @@
-console.log// 导入Firebase相关模块
+// 导入Firebase相关模块
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
 import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
 // 导入配置文件
 import { firebaseConfig, ADMIN_PASSWORD, PUPPY_PASSWORD } from './config.js';
@@ -20,6 +19,9 @@ const MAX_DAILY_CLICK_REWARD = 25; // 每日点击奖励上限
 let lastClickRewardDate = ''; // 上次获得点击奖励的日期
 // 添加登录身份变量
 let loginIdentity = ''; // 记录登录身份：'puppy' 或 'master'
+// 添加聊天消息相关变量
+let chatMessages = []; // 存储聊天消息
+let lastReadMessageId = ''; // 最后一条已读消息的ID
 
 // 初始化Firebase应用
 let app;
@@ -41,18 +43,42 @@ const database = getDatabase(app);
 // ==================== 核心功能函数 ====================
 
 // Firebase数据操作函数
-function saveDays() {
+// 统一的数据保存函数
+function saveData(path, data, successCallback = null) {
+  console.log(`正在保存数据到 Firebase: ${path}...`);
+  
   try {
-    set(ref(database, 'lele/accompanyDays'), accompanyDays)
+    set(ref(database, path), data)
       .then(() => {
-        console.log("陪伴天数保存成功!");
+        console.log(`数据保存成功: ${path}`);
+        if (successCallback) successCallback();
+        
+        // 如果是保存全部数据，更新本地缓存
+        if (path === 'lele') {
+          try {
+            const cacheData = {
+              ...data,
+              timestamp: Date.now()
+            };
+            localStorage.setItem('puppyAppData', JSON.stringify(cacheData));
+          } catch (error) {
+            console.error("缓存数据到本地存储失败:", error);
+          }
+        }
       })
       .catch((error) => {
-        console.error("保存陪伴天数时出错:", error);
+        console.error(`保存数据时出错: ${path}`, error);
+        showMessage(`保存失败: ${error.message}`, 3000);
       });
   } catch (error) {
-    console.error("保存陪伴天数时发生错误:", error);
+    console.error(`保存数据时发生错误: ${path}`, error);
+    showMessage(`保存失败: ${error.message}`, 3000);
   }
+}
+
+// 替换原有的保存函数
+function saveDays() {
+  saveData('lele/accompanyDays', accompanyDays);
 }
 
 // 添加一个新函数，一次性获取所有数据
@@ -116,6 +142,8 @@ function loadAllData() {
       accompanyDays = data.accompanyDays || 51;
       dailyTasks = data.dailyTasks || [];
       wishes = data.wishes || [];
+      chatMessages = data.chatMessages || [];
+      lastReadMessageId = data.lastReadMessageId || '';
       
       // 处理每日点击奖励
       const clickRewardData = data.dailyClickReward;
@@ -141,6 +169,13 @@ function loadAllData() {
       renderDailyTasks();
       renderWishes();
       
+      // 添加错误处理，防止聊天功能影响其他功能
+      try {
+        renderChatMessages();
+      } catch (error) {
+        console.error("渲染聊天消息时出错:", error);
+      }
+      
       // 缓存数据到本地存储
       try {
         const cacheData = {
@@ -149,6 +184,8 @@ function loadAllData() {
           accompanyDays,
           dailyTasks,
           wishes,
+          chatMessages,
+          lastReadMessageId,
           timestamp: Date.now()
         };
         localStorage.setItem('puppyAppData', JSON.stringify(cacheData));
@@ -183,59 +220,26 @@ function loadScore() {
 }
 
 function saveScore() {
-  console.log("正在保存数据到 Firebase...");
-  
-  const statusElem = document.createElement('div');
-  // ...状态元素创建逻辑
-  
-  try {
-    // 创建包含所有数据的对象
-    const allData = {
-      score,
-      log,
-      accompanyDays,
-      dailyTasks,
-      wishes,
-      dailyClickReward: {
-        date: lastClickRewardDate,
-        amount: dailyClickReward
-      }
-    };
+  // 创建包含所有数据的对象
+  const allData = {
+    score,
+    log,
+    accompanyDays,
+    dailyTasks,
+    wishes,
+    chatMessages,
+    lastReadMessageId,
+    dailyClickReward: {
+      date: lastClickRewardDate,
+      amount: dailyClickReward
+    }
+  };
 
-    // 使用set方法保存整个对象
-    set(ref(database, 'lele'), allData)
-      .then(() => {
-        console.log("所有数据保存成功!");
-        // 更新本地缓存
-        const cacheData = {
-          ...allData,
-          timestamp: Date.now()
-        };
-        localStorage.setItem('puppyAppData', JSON.stringify(cacheData));
-        // 显示成功状态...
-      })
-      .catch((error) => {
-        console.error("保存数据时出错:", error);
-        // 显示失败状态...
-      });
-
-  } catch (error) {
-    console.error("保存数据时发生错误:", error);
-  }
+  saveData('lele', allData);
 }
 
 function saveDailyTasks() {
-  try {
-    set(ref(database, 'lele/dailyTasks'), dailyTasks)
-      .then(() => {
-        console.log("每日任务保存成功!");
-      })
-      .catch((error) => {
-        console.error("保存每日任务时出错:", error);
-      });
-  } catch (error) {
-    console.error("保存每日任务时发生错误:", error);
-  }
+  saveData('lele/dailyTasks', dailyTasks);
 }
 
 // 任务管理函数
@@ -726,21 +730,10 @@ function initPuppy() {
 
 // 保存每日点击奖励数据到Firebase
 function saveDailyClickReward() {
-  try {
-    const today = new Date().toDateString();
-    set(ref(database, 'lele/dailyClickReward'), {
-      date: today,
-      amount: dailyClickReward
-    })
-      .then(() => {
-        console.log("每日点击奖励数据保存成功!");
-      })
-      .catch((error) => {
-        console.error("保存每日点击奖励数据时出错:", error);
-      });
-  } catch (error) {
-    console.error("保存每日点击奖励数据时发生错误:", error);
-  }
+  saveData('lele/dailyClickReward', {
+    date: lastClickRewardDate,
+    amount: dailyClickReward
+  });
 }
 
 // 更新小狗状态
@@ -785,13 +778,43 @@ function updatePuppyState(points) {
 function createButton(type, item) {
   const btn = document.createElement('button');
   btn.className = `btn ${type}-btn`;
-  btn.innerHTML = `
-    <div style="text-align:left">
-      <div>${item.name}</div>
-      ${item.desc ? `<small style="color:#666">${item.desc}</small>` : ''}
-    </div>
-    <span>${item.points || item.cost}分</span>
-  `;
+  
+  // 创建左侧文本容器
+  const textSpan = document.createElement('span');
+  textSpan.style.flexGrow = '1'; // 让文本占据剩余空间
+  textSpan.style.textAlign = 'left'; // 文本左对齐
+  
+  // 设置文本内容
+  if (item.name) {
+    const nameDiv = document.createElement('div');
+    nameDiv.textContent = item.name;
+    textSpan.appendChild(nameDiv);
+    
+    if (item.desc) {
+      const descDiv = document.createElement('small');
+      descDiv.style.color = '#666';
+      descDiv.textContent = item.desc;
+      textSpan.appendChild(descDiv);
+    }
+  } else if (item.text) {
+    textSpan.textContent = item.text;
+  }
+  
+  // 创建右侧积分容器
+  const pointsSpan = document.createElement('span');
+  pointsSpan.style.marginLeft = 'auto'; // 确保积分值靠右
+  pointsSpan.style.fontWeight = 'bold'; // 加粗积分
+  
+  // 设置积分文本
+  if (type === 'store') {
+    pointsSpan.textContent = `${item.cost}分`;
+  } else {
+    pointsSpan.textContent = `${item.points}分`;
+  }
+  
+  // 添加到按钮
+  btn.appendChild(textSpan);
+  btn.appendChild(pointsSpan);
   
   // 检查用户角色，如果是小狗登录且不是每日任务相关按钮，则禁用按钮
   const isPuppy = localStorage.getItem('userRole') === 'puppy';
@@ -873,6 +896,8 @@ function createButton(type, item) {
           accompanyDays,
           dailyTasks,
           wishes,
+          chatMessages,
+          lastReadMessageId,
           timestamp: Date.now()
         };
         localStorage.setItem('puppyAppData', JSON.stringify(cacheData));
@@ -1037,7 +1062,9 @@ const rules = {
 
 // 页面加载完成后初始化
 window.onload = function() {
-
+  // 先加载所有数据
+  loadAllData();
+  
   // 初始化所有按钮
   Object.keys(rules).forEach(type => {
     const container = document.getElementById(type === 'store' ? 'store' : type);
@@ -1048,6 +1075,9 @@ window.onload = function() {
       ));
     });
   });
+
+  // 最后初始化聊天界面
+  initChatPanel();
 
   
   // 在页面加载时检查登录状态
@@ -1235,17 +1265,7 @@ window.onload = function() {
 
 // 保存小狗愿望到Firebase
 function saveWishes() {
-  try {
-    set(ref(database, 'lele/wishes'), wishes)
-      .then(() => {
-        console.log("小狗愿望保存成功!");
-      })
-      .catch((error) => {
-        console.error("保存小狗愿望时出错:", error);
-      });
-  } catch (error) {
-    console.error("保存小狗愿望时发生错误:", error);
-  }
+  saveData('lele/wishes', wishes);
 }
 
 // 添加新愿望
@@ -1381,5 +1401,163 @@ function renderWishes() {
     wishItem.querySelector('.wish-delete-btn').onclick = () => deleteWish(index);
     wishesContainer.appendChild(wishItem);
   });
+}
+
+// 聊天功能相关函数
+function saveChatMessages() {
+  saveData('lele/chatMessages', chatMessages);
+}
+
+function saveLastReadMessageId() {
+  saveData('lele/lastReadMessageId', lastReadMessageId);
+}
+
+function addChatMessage(sender, content) {
+  if (!content || content.trim() === '') return;
+  
+  const newMessage = {
+    id: Date.now().toString(),
+    sender: sender,
+    content: content.trim(),
+    timestamp: Date.now(),
+    read: false
+  };
+  
+  chatMessages.push(newMessage);
+  saveChatMessages();
+  renderChatMessages();
+  
+  // 如果是当前用户发送的消息，标记为已读
+  if (sender === loginIdentity) {
+    markAllMessagesAsRead();
+  }
+  
+  // 更新面板高度
+  updatePanelHeight('chatPanel');
+}
+
+function markAllMessagesAsRead() {
+  let hasUnread = false;
+  
+  chatMessages.forEach(message => {
+    if (!message.read) {
+      message.read = true;
+      hasUnread = true;
+    }
+  });
+  
+  if (hasUnread) {
+    saveChatMessages();
+    
+    // 更新最后已读消息ID
+    if (chatMessages.length > 0) {
+      lastReadMessageId = chatMessages[chatMessages.length - 1].id;
+      saveLastReadMessageId();
+    }
+    
+    // 更新未读消息计数
+    updateUnreadMessageCount();
+  }
+}
+
+function updateUnreadMessageCount() {
+  const chatButton = document.querySelector('.panel-button[data-panel="chatPanel"]');
+  if (!chatButton) return;
+  
+  const unreadCount = chatMessages.filter(msg => !msg.read).length;
+  
+  const badge = chatButton.querySelector('.unread-badge') || document.createElement('span');
+  badge.className = 'unread-badge';
+  
+  if (unreadCount > 0) {
+    badge.textContent = unreadCount;
+    badge.style.display = 'inline-block';
+    if (!chatButton.contains(badge)) {
+      chatButton.appendChild(badge);
+    }
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function renderChatMessages() {
+  const chatContainer = document.getElementById('chatMessages');
+  if (!chatContainer) return;
+  
+  chatContainer.innerHTML = '';
+  
+  if (chatMessages.length === 0) {
+    chatContainer.innerHTML = '<div class="empty-chat">暂无消息，开始聊天吧！</div>';
+    return;
+  }
+  
+  // 按时间排序，最新的消息在底部
+  chatMessages.sort((a, b) => a.timestamp - b.timestamp);
+  
+  chatMessages.forEach(message => {
+    const messageItem = document.createElement('div');
+    messageItem.className = `chat-message ${message.sender === loginIdentity ? 'self-message' : 'other-message'}`;
+    
+    const formattedTime = new Date(message.timestamp).toLocaleString();
+    
+    messageItem.innerHTML = `
+      <div class="message-header">
+        <span class="message-sender">${message.sender === 'puppy' ? '小狗' : '主人'}</span>
+        <span class="message-time">${formattedTime}</span>
+        ${message.read ? '<span class="read-status">已读</span>' : ''}
+      </div>
+      <div class="message-content">${message.content}</div>
+    `;
+    
+    chatContainer.appendChild(messageItem);
+  });
+  
+  // 滚动到最新消息
+  chatContainer.scrollTop = chatContainer.scrollHeight;
+  
+  // 更新未读消息计数
+  updateUnreadMessageCount();
+}
+
+// 添加初始化聊天界面的函数
+function initChatPanel() {
+  // 检查元素是否存在
+  const chatPanel = document.getElementById('chatPanel');
+  const chatInput = document.getElementById('chatInput');
+  const sendButton = document.getElementById('sendChatButton');
+  const chatMessages = document.getElementById('chatMessages');
+  
+  // 如果元素不存在，则提前返回
+  if (!chatPanel || !chatInput || !sendButton || !chatMessages) {
+    console.warn('聊天面板元素未找到，跳过初始化');
+    return;
+  }
+  
+  // 发送按钮点击事件
+  sendButton.addEventListener('click', () => {
+    if (chatInput.value.trim() !== '') {
+      addChatMessage(loginIdentity, chatInput.value);
+      chatInput.value = '';
+    }
+  });
+  
+  // 输入框回车事件
+  chatInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendButton.click();
+    }
+  });
+  
+  // 当聊天面板打开时，标记所有消息为已读
+  const chatPanelButton = document.querySelector('.panel-button[data-panel="chatPanel"]');
+  if (chatPanelButton) {
+    chatPanelButton.addEventListener('click', () => {
+      setTimeout(() => {
+        markAllMessagesAsRead();
+        renderChatMessages();
+      }, 300);
+    });
+  }
 }
 
