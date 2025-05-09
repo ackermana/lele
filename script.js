@@ -1523,9 +1523,12 @@ function renderChatMessages() {
     
     const formattedTime = new Date(message.timestamp).toLocaleString();
     
+    // 修改这里，根据消息的实际发送者显示名称
+    const senderName = message.sender === 'puppy' ? '小狗' : '主人';
+    
     messageItem.innerHTML = `
       <div class="message-header">
-        <span class="message-sender">${message.sender === 'puppy' ? '小狗' : '主人'}</span>
+        <span class="message-sender">${senderName}</span>
         <span class="message-time">${formattedTime}</span>
         ${message.read ? '<span class="read-status">已读</span>' : ''}
       </div>
