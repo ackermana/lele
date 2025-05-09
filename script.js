@@ -235,7 +235,6 @@ function saveScore() {
     }
   };
   
-  
   // 立即更新显示，不等待Firebase保存完成
   updateDisplay();
   
@@ -1280,10 +1279,10 @@ window.onload = function() {
   }
 
   // 初始展开每日清单面板
-  const dailyTaskPanel = document.getElementById('dailyTaskPanel');
-  if (dailyTaskPanel) {
-    dailyTaskPanel.style.maxHeight = dailyTaskPanel.scrollHeight + "px";
-  }
+  // const dailyTaskPanel = document.getElementById('dailyTaskPanel');
+  // if (dailyTaskPanel) {
+  //   dailyTaskPanel.style.maxHeight = dailyTaskPanel.scrollHeight + "px";
+  // }
 };
 
 // 保存小狗愿望到Firebase
@@ -1442,7 +1441,7 @@ function addChatMessage(sender, content) {
     id: Date.now().toString(),
     sender: sender,
     content: content.trim(),
-    timestamp: Date.now(),
+    timestamp: Date.now(), 
     read: false
   };
   
@@ -1451,9 +1450,9 @@ function addChatMessage(sender, content) {
   renderChatMessages();
   
   // 如果是当前用户发送的消息，标记为已读
-  if (sender === loginIdentity) {
-    markAllMessagesAsRead();
-  }
+  // if (sender === loginIdentity) {
+  //   markAllMessagesAsRead();
+  // }
   
   // 更新面板高度
   updatePanelHeight('chatPanel');
@@ -1503,6 +1502,29 @@ function updateUnreadMessageCount() {
   }
 }
 
+function sendChatMessage(message) {
+  if (!message || message.trim() === '') return;
+  
+  // 确保使用当前登录身份作为发送者
+  const sender = loginIdentity || 'unknown';
+  
+  const newMessage = {
+    id: Date.now().toString(),
+    text: message.trim(),
+    sender: sender, // 添加发送者信息
+    timestamp: Date.now(),
+    read: false
+  };
+  
+  chatMessages.push(newMessage);
+  saveScore(); // 保存包含新消息的数据
+  renderChatMessages(); // 重新渲染消息列表
+  
+  // 清空输入框
+  const chatInput = document.getElementById('chatInput');
+  if (chatInput) chatInput.value = '';
+}
+
 function renderChatMessages() {
   const chatContainer = document.getElementById('chatMessages');
   if (!chatContainer) return;
@@ -1524,7 +1546,7 @@ function renderChatMessages() {
     const formattedTime = new Date(message.timestamp).toLocaleString();
     
     // 修改这里，根据消息的实际发送者显示名称
-    const senderName = message.sender === 'puppy' ? '小狗' : '主人';
+    const senderName = message.sender === 'puppy' ? '小狗' : message.sender === 'master' ? '主人' : '未知';
     
     messageItem.innerHTML = `
       <div class="message-header">
@@ -1543,6 +1565,27 @@ function renderChatMessages() {
   
   // 更新未读消息计数
   updateUnreadMessageCount();
+}
+
+// 确保登录后设置正确的身份
+function login(identity, password) {
+  // 验证密码
+  if (identity === 'master' && password === ADMIN_PASSWORD) {
+    loginIdentity = 'master';
+    showMessage('主人登录成功！', 3000);
+    // 更新UI显示登录状态
+    updateLoginStatus();
+    return true;
+  } else if (identity === 'puppy' && password === PUPPY_PASSWORD) {
+    loginIdentity = 'puppy';
+    showMessage('小狗登录成功！', 3000);
+    // 更新UI显示登录状态
+    updateLoginStatus();
+    return true;
+  } else {
+    showMessage('密码错误，请重试', 3000);
+    return false;
+  }
 }
 
 // 添加初始化聊天界面的函数
