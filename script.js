@@ -15,7 +15,7 @@ let dailyTasks = []; // 添加每日任务数组
 let wishes = []; // 添加小狗愿望数组
 // 添加小狗点击奖励相关变量
 let dailyClickReward = 0; // 今日已获得的点击奖励
-const MAX_DAILY_CLICK_REWARD = 205; // 每日点击奖励上限
+const MAX_DAILY_CLICK_REWARD = 25; // 每日点击奖励上限
 let lastClickRewardDate = ''; // 上次获得点击奖励的日期
 // 添加登录身份变量
 let loginIdentity = ''; // 记录登录身份：'puppy' 或 'master'
