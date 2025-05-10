@@ -980,6 +980,77 @@ function initializeDeductionsForPuppy() {
   });
 }
 
+function initializeDeductions() {
+  const container = document.getElementById('deductions');
+  deductionItems.forEach(item => {
+    const btn = document.createElement('button');
+    btn.className = 'btn deduct-btn';
+    btn.innerHTML = `${item.name} <span class="badge">-${item.points}</span>`;
+    btn.addEventListener('click', () => {
+      score -= item.points;
+      log.push({
+        time: Date.now(),
+        action: `扣分项目: ${item.name}`,
+        points: -item.points
+      });
+      saveScore();
+      updateDisplay();
+      showSpecialMessage(-item.points);
+      updatePuppyState(-item.points);
+    });
+    container.appendChild(btn);
+  });
+}
+
+function initializeAdditions() {
+  const container = document.getElementById('additions');
+  additionItems.forEach(item => {
+    const btn = document.createElement('button');
+    btn.className = 'btn add-btn';
+    btn.innerHTML = `${item.name} <span class="badge">+${item.points}</span>`;
+    btn.addEventListener('click', () => {
+      score += item.points;
+      log.push({
+        time: Date.now(),
+        action: `加分项目: ${item.name}`,
+        points: item.points
+      });
+      saveScore();
+      updateDisplay();
+      showSpecialMessage(item.points);
+      updatePuppyState(item.points);
+    });
+    container.appendChild(btn);
+  });
+}
+
+function initializeStore() {
+  const container = document.getElementById('store');
+  storeItems.forEach(item => {
+    const btn = document.createElement('button');
+    btn.className = 'btn store-btn';
+    btn.innerHTML = `${item.name} <span class="badge">${item.cost}分</span>`;
+    btn.addEventListener('click', () => {
+      if (score >= item.cost) {
+        score -= item.cost;
+        log.push({
+          time: Date.now(),
+          action: `兑换商店项目: ${item.name}`,
+          points: -item.cost
+        });
+        saveScore();
+        updateDisplay();
+        showSpecialMessage(-item.cost);
+        updatePuppyState(-item.cost);
+        showMessage(`成功兑换: ${item.name}`, 3000);
+      } else {
+        showMessage(`积分不足，无法兑换 ${item.name}！还需要 ${item.cost - score} 分`, 3000);
+      }
+    });
+    container.appendChild(btn);
+  });
+}
+
 // 为小狗初始化加分按钮（只读）
 function initializeAdditionsForPuppy() {
   const container = document.getElementById('additions');
@@ -1001,7 +1072,7 @@ function initializeStoreForPuppy() {
   storeItems.forEach(item => {
     const btn = document.createElement('button');
     btn.className = 'btn store-btn';
-    btn.innerHTML = `${item.name} <span class="badge">-${item.points}</span>`;
+    btn.innerHTML = `${item.name} <span class="badge">${item.cost}分</span>`;
     btn.disabled = true;
     btn.addEventListener('click', () => {
       showMessage('小狗不能自己使用商店哦！', 2000);
@@ -1017,15 +1088,18 @@ loginBtn.addEventListener('click', function() {
   
   if (password === ADMIN_PASSWORD) {
     userRole = 'admin';
+    loginIdentity = 'master';
   } else if (password === PUPPY_PASSWORD) {
     userRole = 'puppy';
+    loginIdentity = 'puppy';
   } else {
     loginError.textContent = '密码错误！';
     return;
   }
   
-  // 保存用户角色
+  // 保存用户角色和登录身份
   localStorage.setItem('userRole', userRole);
+  localStorage.setItem('loginIdentity', loginIdentity);
   
   // 隐藏登录界面
   loginScreen.style.display = 'none';
@@ -1035,15 +1109,28 @@ loginBtn.addEventListener('click', function() {
   
   // 加载数据
   loadScore();
+  
+  // 保存登录身份到Firebase
+  saveData('lele/loginIdentity', loginIdentity);
 });
 
 // 面板切换函数
 function togglePanel(panelId) {
   const panel = document.getElementById(panelId);
-  if (panel.style.maxHeight) {
-    panel.style.maxHeight = null;
-  } else {
-    panel.style.maxHeight = panel.scrollHeight + "px";
+  if (panel) {
+    if (panel.style.maxHeight) {
+      panel.style.maxHeight = null;
+    } else {
+      panel.style.maxHeight = panel.scrollHeight + "px";
+      
+      // 如果是聊天面板，则渲染消息并标记为已读
+      if (panelId === 'chatPanel') {
+        setTimeout(() => {
+          markAllMessagesAsRead();
+          renderChatMessages();
+        }, 300);
+      }
+    }
   }
 }
 
@@ -1112,6 +1199,14 @@ window.onload = function() {
   
   // 在页面加载时检查登录状态
   const isLoggedIn = localStorage.getItem('isLoggedIn');
+  // 尝试从本地存储获取登录身份
+  const savedIdentity = localStorage.getItem('loginIdentity');
+  if (savedIdentity) {
+    loginIdentity = savedIdentity;
+    // 添加这一行：将登录身份保存到localStorage
+    localStorage.setItem('loginIdentity', loginIdentity);
+  }
+  
   if (isLoggedIn === 'true') {
     document.getElementById('loginScreen').style.display = 'none';
   }
@@ -1131,6 +1226,8 @@ window.onload = function() {
         localStorage.setItem('userRole', 'admin');
         localStorage.setItem('isLoggedIn', 'true');
         loginIdentity = 'master';
+        // 添加这一行：将登录身份保存到localStorage
+        localStorage.setItem('loginIdentity', loginIdentity);
         loginScreen.style.display = 'none';
         // 显示欢迎消息
         if (speechBubble) {
@@ -1145,11 +1242,15 @@ window.onload = function() {
             speechBubble.style.backgroundColor = "";
           }, 5000);
         }
+        // 保存数据到Firebase
+        saveScore();
       } else if (password === PUPPY_PASSWORD) {
         // 小狗登录
         localStorage.setItem('userRole', 'puppy');
         localStorage.setItem('isLoggedIn', 'true');
         loginIdentity = 'puppy';
+        // 添加这一行：将登录身份保存到localStorage
+        localStorage.setItem('loginIdentity', loginIdentity);
         loginScreen.style.display = 'none';
         // 显示欢迎消息
         if (speechBubble) {
@@ -1164,6 +1265,8 @@ window.onload = function() {
             speechBubble.style.backgroundColor = "";
           }, 5000);
         }
+        // 保存数据到Firebase
+        saveScore();
       } else {
         // 密码错误
         loginError.textContent = '密码错误，请重试';
@@ -1203,6 +1306,9 @@ window.onload = function() {
     if(confirm('确定要退出登录吗？')) {
       localStorage.removeItem('userRole');
       localStorage.removeItem('isLoggedIn');
+      // 添加这一行：清除登录身份
+      localStorage.removeItem('loginIdentity');
+      loginIdentity = '';
       location.reload(); // 刷新页面，回到登录界面
     }
   });
@@ -1445,11 +1551,17 @@ function saveLastReadMessageId() {
 function addChatMessage(sender, content) {
   if (!content || content.trim() === '') return;
   
+  // 如果sender为空，使用当前登录身份
+  if (!sender) {
+    sender = loginIdentity || localStorage.getItem('loginIdentity') || '未知';
+  }
+  
+  const messageId = Date.now().toString();
   const newMessage = {
-    id: Date.now().toString(),
+    id: messageId,
     sender: sender,
     content: content.trim(),
-    timestamp: Date.now(), 
+    timestamp: Date.now(),
     read: false
   };
   
@@ -1457,32 +1569,26 @@ function addChatMessage(sender, content) {
   saveChatMessages();
   renderChatMessages();
   
-  // 如果是当前用户发送的消息，标记为已读
-  // if (sender === loginIdentity) {
-  //   markAllMessagesAsRead();
-  // }
-  
   // 更新面板高度
   updatePanelHeight('chatPanel');
 }
 
 function markAllMessagesAsRead() {
-  let hasUnread = false;
-  
+  let changed = false;
   chatMessages.forEach(message => {
     if (!message.read) {
       message.read = true;
-      hasUnread = true;
+      changed = true;
     }
   });
   
-  if (hasUnread) {
+  if (changed) {
     saveChatMessages();
     
     // 更新最后已读消息ID
     if (chatMessages.length > 0) {
       lastReadMessageId = chatMessages[chatMessages.length - 1].id;
-      saveLastReadMessageId();
+      saveData('lele/lastReadMessageId', lastReadMessageId);
     }
     
     // 更新未读消息计数
@@ -1518,7 +1624,7 @@ function sendChatMessage(message) {
   
   const newMessage = {
     id: Date.now().toString(),
-    text: message.trim(),
+    content: message.trim(), // 使用content字段而不是text
     sender: sender, // 添加发送者信息
     timestamp: Date.now(),
     read: false
@@ -1534,42 +1640,72 @@ function sendChatMessage(message) {
 }
 
 function renderChatMessages() {
-  const chatContainer = document.getElementById('chatMessages');
-  if (!chatContainer) return;
+  const chatMessagesContainer = document.getElementById('chatMessages');
+  if (!chatMessagesContainer) return;
   
-  chatContainer.innerHTML = '';
+  // 确保loginIdentity有值
+  if (!loginIdentity) {
+    loginIdentity = localStorage.getItem('loginIdentity') || '未知';
+  }
+  
+  // 清空现有消息
+  chatMessagesContainer.innerHTML = '';
   
   if (chatMessages.length === 0) {
-    chatContainer.innerHTML = '<div class="empty-chat">暂无消息，开始聊天吧！</div>';
+    chatMessagesContainer.innerHTML = '<div style="text-align:center; padding: 10px; color: #999;">暂无消息</div>';
     return;
   }
   
   // 按时间排序，最新的消息在底部
   chatMessages.sort((a, b) => a.timestamp - b.timestamp);
   
+  // 确保使用已保存的loginIdentity变量
+  const currentUser = loginIdentity || '未知';
+  
   chatMessages.forEach(message => {
-    const messageItem = document.createElement('div');
-    messageItem.className = `chat-message ${message.sender === loginIdentity ? 'self-message' : 'other-message'}`;
+    const messageElement = document.createElement('div');
+    messageElement.className = `chat-message ${message.sender === currentUser ? 'chat-message-self' : ''}`;
     
-    const formattedTime = new Date(message.timestamp).toLocaleString();
+    // 创建消息头部（发送者和时间）
+    const headerElement = document.createElement('div');
+    headerElement.className = 'chat-message-header';
     
-    // 修改这里，根据消息的实际发送者显示名称
-    const senderName = message.sender === 'puppy' ? '小狗' : message.sender === 'master' ? '主人' : '未知';
+    // 设置发送者名称
+    const senderElement = document.createElement('span');
+    senderElement.className = 'chat-message-sender';
+    // 根据发送者身份设置显示名称
+    if (message.sender === 'master') {
+      senderElement.textContent = '主人';
+    } else if (message.sender === 'puppy') {
+      senderElement.textContent = '乐乐';
+    } else {
+      senderElement.textContent = message.sender || '未知';
+    }
     
-    messageItem.innerHTML = `
-      <div class="message-header">
-        <span class="message-sender">${senderName}</span>
-        <span class="message-time">${formattedTime}</span>
-        ${message.read ? '<span class="read-status">已读</span>' : ''}
-      </div>
-      <div class="message-content">${message.content}</div>
-    `;
+    // 设置发送时间
+    const timeElement = document.createElement('span');
+    timeElement.className = 'chat-message-time';
+    timeElement.textContent = new Date(message.timestamp).toLocaleString();
     
-    chatContainer.appendChild(messageItem);
+    // 添加发送者和时间到头部
+    headerElement.appendChild(senderElement);
+    headerElement.appendChild(timeElement);
+    
+    // 创建消息内容
+    const contentElement = document.createElement('div');
+    contentElement.className = 'chat-message-content';
+    contentElement.textContent = message.content;
+    
+    // 将头部和内容添加到消息元素
+    messageElement.appendChild(headerElement);
+    messageElement.appendChild(contentElement);
+    
+    // 将消息添加到容器
+    chatMessagesContainer.appendChild(messageElement);
   });
   
   // 滚动到最新消息
-  chatContainer.scrollTop = chatContainer.scrollHeight;
+  chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
   
   // 更新未读消息计数
   updateUnreadMessageCount();
@@ -1627,14 +1763,14 @@ function initChatPanel() {
   });
   
   // 当聊天面板打开时，标记所有消息为已读
-  const chatPanelButton = document.querySelector('.panel-button[data-panel="chatPanel"]');
-  if (chatPanelButton) {
-    chatPanelButton.addEventListener('click', () => {
-      setTimeout(() => {
-        markAllMessagesAsRead();
-        renderChatMessages();
-      }, 300);
-    });
-  }
+  document.querySelector('.accordion[onclick="window.togglePanel(\'chatPanel\')"]').addEventListener('click', () => {
+    setTimeout(() => {
+      markAllMessagesAsRead();
+      renderChatMessages();
+    }, 300);
+  });
+  
+  // 初始渲染聊天消息
+  renderChatMessages();
 }
 
