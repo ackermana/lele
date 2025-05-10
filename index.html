@@ -631,11 +631,6 @@
             overflow: hidden; /* 防止溢出 */
         }
 
-        /* 确保其他面板不受影响 */
-        .daily-tasks, .wish-items, .btn-group {
-            display: block !important; /* 强制显示 */
-        }
-
         .chat-messages {
             flex: 1;
             overflow-y: auto;
@@ -646,6 +641,58 @@
             min-height: 200px;
         }
 
+        /* 修改聊天消息样式 */
+        .chat-message {
+            margin-bottom: 12px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            background-color: white;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            max-width: 85%;
+            word-break: break-word;
+        }
+
+        .chat-message-self {
+            margin-left: auto;
+            background-color: #e8f5e9; /* 修改为绿色背景 */
+        }
+
+        /* 新增：消息头部样式 */
+        .chat-message-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            font-size: 0.8em;
+            color: #666;
+        }
+
+        .chat-message-sender {
+            font-weight: bold;
+        }
+
+        .chat-message-time {
+            font-size: 0.9em;
+        }
+
+        /* 新增：消息内容样式 */
+        .chat-message-content {
+            margin: 6px 0;
+        }
+
+        /* 新增：消息底部样式 */
+        .chat-message-footer {
+            display: flex;
+            justify-content: flex-end;
+            font-size: 0.75em;
+            color: #999;
+            margin-top: 4px;
+        }
+
+        .chat-message-status {
+            color: #4CAF50;
+        }
+
+        /* 保留原有的其他样式 */
         .chat-input-container {
             display: flex;
             margin-top: 10px;

@@ -107,6 +107,8 @@ function loadAllData() {
         accompanyDays = data.accompanyDays || 51;
         dailyTasks = data.dailyTasks || [];
         wishes = data.wishes || [];
+        // 添加这一行：从缓存中恢复登录身份
+        loginIdentity = data.loginIdentity || '';
         
         // 更新界面
         updateDisplay();
@@ -144,6 +146,8 @@ function loadAllData() {
       wishes = data.wishes || [];
       chatMessages = data.chatMessages || [];
       lastReadMessageId = data.lastReadMessageId || '';
+      // 添加这一行：从Firebase中恢复登录身份
+      loginIdentity = data.loginIdentity || '';
       
       // 处理每日点击奖励
       const clickRewardData = data.dailyClickReward;
@@ -186,6 +190,8 @@ function loadAllData() {
           wishes,
           chatMessages,
           lastReadMessageId,
+          // 添加这一行：将登录身份保存到缓存
+          loginIdentity,
           timestamp: Date.now()
         };
         localStorage.setItem('puppyAppData', JSON.stringify(cacheData));
@@ -229,6 +235,8 @@ function saveScore() {
     wishes,
     chatMessages,
     lastReadMessageId,
+    // 添加这一行：确保登录身份也被保存到Firebase
+    loginIdentity,
     dailyClickReward: {
       date: lastClickRewardDate,
       amount: dailyClickReward
