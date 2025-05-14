@@ -1404,6 +1404,11 @@ function saveWishes() {
   saveData('lele/wishes', wishes);
 }
 
+// 保存每日任务到Firebase
+function saveDailyTasks() {
+  saveData('lele/dailyTasks', dailyTasks);
+}
+
 // 添加新愿望
 function addNewWish() {
   const wishName = prompt('请输入愿望名称:');
