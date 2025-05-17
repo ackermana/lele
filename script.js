@@ -339,6 +339,9 @@ function checkAndUpdateDays() {
         speechBubble.style.opacity = "0";
       }, 5000);
     }
+    
+    // 添加这一行：在新的一天重置每日任务
+    resetDailyTasks();
   }
 }
 
