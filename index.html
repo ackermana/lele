@@ -449,7 +449,7 @@
                 <div class="btn-group" id="deductions"></div>
                 <div class="note">
                     惩罚包括：罚抄、罚跪、挨揍、主人不理！<br>
-                    扣分有误可申诉，经主人认定返还并奖励！
+                    
                 </div>
             </div>
         </div>
@@ -484,7 +484,7 @@
         <!-- 聊天面板 --> 
         <div class="card"> 
             <div class="accordion" onclick="window.togglePanel('chatPanel')"> 
-                <h2>💬 聊天留言</h2> 
+                <h2>💬 留言板</h2> 
                 <i class="fas fa-chevron-down"></i> 
             </div> 
             <div id="chatPanel" class="panel"> 
@@ -781,6 +781,26 @@
             display: flex;
             align-items: center;
             justify-content: center;
+        }
+
+        /* 新增：不同身份的留言样式 */
+        .message-item {
+            margin-bottom: 12px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            max-width: 100%;
+            word-break: break-word;
+        }
+
+        .message-master {
+            margin-left: auto; /* 主人的消息靠右 */
+            background-color: #8effc169; /* 浅绿色背景 */
+        }
+
+        .message-puppy {
+            margin-right: auto; /* 乐乐的消息靠左 */
+            background-color: #fdd6dc75; /* 浅红色背景 */
         }
     </style>
 </body>

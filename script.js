@@ -21,7 +21,7 @@ let lastClickRewardDate = ''; // 上次获得点击奖励的日期
 let loginIdentity = ''; // 记录登录身份：'puppy' 或 'master'
 // 添加聊天消息相关变量
 let chatMessages = []; // 存储聊天消息
-let lastReadMessageId = ''; // 最后一条已读消息的ID
+
 
 // 初始化Firebase应用
 let app;
@@ -109,12 +109,14 @@ function loadAllData() {
         wishes = data.wishes || [];
         // 添加这一行：从缓存中恢复登录身份
         loginIdentity = data.loginIdentity || '';
-        
+        // 从缓存加载留言数据
+        chatMessages = data.chatMessages || [];
         // 更新界面
         updateDisplay();
         updateDaysDisplay();
         renderDailyTasks();
         renderWishes();
+        renderMessageBoard();
         
         // 隐藏加载指示器
         document.body.removeChild(loadingIndicator);
@@ -145,8 +147,7 @@ function loadAllData() {
       dailyTasks = data.dailyTasks || [];
       wishes = data.wishes || [];
       chatMessages = data.chatMessages || [];
-      lastReadMessageId = data.lastReadMessageId || '';
-      // 添加这一行：从Firebase中恢复登录身份
+
       loginIdentity = data.loginIdentity || '';
       
       // 处理每日点击奖励
@@ -175,9 +176,9 @@ function loadAllData() {
       
       // 添加错误处理，防止聊天功能影响其他功能
       try {
-        renderChatMessages();
+        renderMessageBoard(); 
       } catch (error) {
-        console.error("渲染聊天消息时出错:", error);
+        console.error("渲染留言板消息时出错:", error);
       }
       
       // 缓存数据到本地存储
@@ -189,8 +190,6 @@ function loadAllData() {
           dailyTasks,
           wishes,
           chatMessages,
-          lastReadMessageId,
-          // 添加这一行：将登录身份保存到缓存
           loginIdentity,
           timestamp: Date.now()
         };
@@ -233,9 +232,7 @@ function saveScore() {
     accompanyDays,
     dailyTasks,
     wishes,
-    chatMessages,
-    lastReadMessageId,
-    // 添加这一行：确保登录身份也被保存到Firebase
+    chatMessages: chatMessages,
     loginIdentity,
     dailyClickReward: {
       date: lastClickRewardDate,
@@ -867,18 +864,7 @@ function createButton(type, item) {
   
   // 只有当不是小狗角色时，才添加正常的点击事件处理
   btn.onclick = () => {
-    // 处理自定义记录功能
-    if (item.isCustomRecord) {
-        const customText = prompt("请输入要记录的内容：");
-        if (customText && customText.trim() !== "") {
-            const points = 0;
-            log.push({time: Date.now(), action: `记录: ${customText}`, points});
-            saveScore();
-            updateDisplay();
-            showMessage("记录已保存！", 3000);
-        }
-        return;
-    }
+
     
     let points = 0;
     let success = true;
@@ -929,8 +915,9 @@ function createButton(type, item) {
           accompanyDays,
           dailyTasks,
           wishes,
-          chatMessages,
-          lastReadMessageId,
+          // 移除 chatMessages 和 lastReadMessageId 的缓存
+          // chatMessages,
+          // lastReadMessageId,
           timestamp: Date.now()
         };
         localStorage.setItem('puppyAppData', JSON.stringify(cacheData));
@@ -1126,11 +1113,10 @@ function togglePanel(panelId) {
     } else {
       panel.style.maxHeight = panel.scrollHeight + "px";
       
-      // 如果是聊天面板，则渲染消息并标记为已读
-      if (panelId === 'chatPanel') {
+      // 如果是留言板面板，则渲染消息
+      if (panelId === 'chatPanel') { // 沿用 chatPanel ID
         setTimeout(() => {
-          markAllMessagesAsRead();
-          renderChatMessages();
+          renderMessageBoard(); // 渲染留言板消息
         }, 300);
       }
     }
@@ -1167,11 +1153,10 @@ const rules = {
     {name: "其他让主人高兴行为", points: 10, desc: "无上限"}
   ],
   store: [
-    {name: "记录下今天吧~", cost: 0, desc: "记录咯", isCustomRecord: true},
     {name: "抱抱", cost: 0},
     {name: "亲亲", cost: 0},
-    {name: "摸摸它", cost: 10},
     {name: "主人照片", cost: 30},
+    {name: '零食大礼包', cost: 30, desc: '主人给你买' },
     {name: "文字涩涩", cost: 40, desc: "次数：数不清了"},
     {name: "语音涩涩", cost: 60, desc: "次数：3/10"},
     {name: "神秘礼物", cost: 300, desc: "每次兑换加100"}
@@ -1196,8 +1181,8 @@ window.onload = function() {
     });
   });
 
-  // 最后初始化聊天界面
-  initChatPanel();
+  // 最后初始化留言板界面
+  initMessageBoard();
 
   
   // 在页面加载时检查登录状态
@@ -1318,8 +1303,7 @@ window.onload = function() {
   
   document.body.appendChild(logoutBtn);
 
-  // 加载Firebase数据 - 替换为新的加载函数
-  loadAllData();
+  // 加载Firebase数据 - 已经在开头调用过一次
   
   // 初始化天数显示
   updateDaysDisplay();
@@ -1547,176 +1531,108 @@ function renderWishes() {
   });
 }
 
-// 聊天功能相关函数
-function saveChatMessages() {
-  saveData('lele/chatMessages', chatMessages);
+// 留言板功能相关函数
+// 新增：保存留言板消息函数
+function saveMessages() {
+  saveData('lele/chatMessages', chatMessages); // 沿用 chatMessages 变量名，但数据结构可能需要调整
 }
 
-function saveLastReadMessageId() {
-  saveData('lele/lastReadMessageId', lastReadMessageId);
-}
-
-function addChatMessage(sender, content) {
-  if (!content || content.trim() === '') return;
-  
-  // 如果sender为空，使用当前登录身份
-  if (!sender) {
-    sender = loginIdentity || localStorage.getItem('loginIdentity') || '未知';
-  }
-  
-  const messageId = Date.now().toString();
+// 新增：添加留言函数
+function addMessage(sender, messageText) {
   const newMessage = {
-    id: messageId,
+    id: Date.now().toString(), // 使用时间戳作为唯一ID
     sender: sender,
-    content: content.trim(),
-    timestamp: Date.now(),
-    read: false
+    text: messageText,
+    timestamp: Date.now()
   };
-  
   chatMessages.push(newMessage);
-  saveChatMessages();
-  renderChatMessages();
-  
-  // 更新面板高度
-  updatePanelHeight('chatPanel');
+  saveMessages(); // 保存到Firebase (使用新的保存函数)
+  renderMessageBoard(); // 立即更新显示
 }
 
-function markAllMessagesAsRead() {
-  let changed = false;
-  chatMessages.forEach(message => {
-    if (!message.read) {
-      message.read = true;
-      changed = true;
-    }
-  });
-  
-  if (changed) {
-    saveChatMessages();
-    
-    // 更新最后已读消息ID
-    if (chatMessages.length > 0) {
-      lastReadMessageId = chatMessages[chatMessages.length - 1].id;
-      saveData('lele/lastReadMessageId', lastReadMessageId);
-    }
-    
-    // 更新未读消息计数
-    updateUnreadMessageCount();
-  }
-}
+// 新增：渲染留言板消息函数
+function renderMessageBoard() {
+  const messagesContainer = document.getElementById('chatMessages'); // 沿用 chatMessages ID
+  if (!messagesContainer) return;
 
-function updateUnreadMessageCount() {
-  const chatButton = document.querySelector('.panel-button[data-panel="chatPanel"]');
-  if (!chatButton) return;
-  
-  const unreadCount = chatMessages.filter(msg => !msg.read).length;
-  
-  const badge = chatButton.querySelector('.unread-badge') || document.createElement('span');
-  badge.className = 'unread-badge';
-  
-  if (unreadCount > 0) {
-    badge.textContent = unreadCount;
-    badge.style.display = 'inline-block';
-    if (!chatButton.contains(badge)) {
-      chatButton.appendChild(badge);
-    }
-  } else {
-    badge.style.display = 'none';
-  }
-}
+  messagesContainer.innerHTML = ''; // 清空现有消息
 
-function sendChatMessage(message) {
-  if (!message || message.trim() === '') return;
-  
-  // 确保使用当前登录身份作为发送者
-  const sender = loginIdentity || 'unknown';
-  
-  const newMessage = {
-    id: Date.now().toString(),
-    content: message.trim(), // 使用content字段而不是text
-    sender: sender, // 添加发送者信息
-    timestamp: Date.now(),
-    read: false
-  };
-  
-  chatMessages.push(newMessage);
-  saveScore(); // 保存包含新消息的数据
-  renderChatMessages(); // 重新渲染消息列表
-  
-  // 清空输入框
-  const chatInput = document.getElementById('chatInput');
-  if (chatInput) chatInput.value = '';
-}
+  // 倒序显示最新留言在最上面
+  const reversedMessages = [...chatMessages].reverse();
 
-function renderChatMessages() {
-  const chatMessagesContainer = document.getElementById('chatMessages');
-  if (!chatMessagesContainer) return;
-  
-  // 确保loginIdentity有值
-  if (!loginIdentity) {
-    loginIdentity = localStorage.getItem('loginIdentity') || '未知';
-  }
-  
-  // 清空现有消息
-  chatMessagesContainer.innerHTML = '';
-  
-  if (chatMessages.length === 0) {
-    chatMessagesContainer.innerHTML = '<div style="text-align:center; padding: 10px; color: #999;">暂无消息</div>';
+  if (reversedMessages.length === 0) {
+    messagesContainer.innerHTML = '<div style="text-align:center; padding: 10px; color: #999;">暂无留言</div>';
     return;
   }
-  
-  // 按时间排序，最新的消息在底部
-  chatMessages.sort((a, b) => a.timestamp - b.timestamp);
-  
-  // 确保使用已保存的loginIdentity变量
-  const currentUser = loginIdentity || '未知';
-  
-  chatMessages.forEach(message => {
+
+  reversedMessages.forEach(message => {
     const messageElement = document.createElement('div');
-    messageElement.className = `chat-message ${message.sender === currentUser ? 'chat-message-self' : ''}`;
-    
-    // 创建消息头部（发送者和时间）
-    const headerElement = document.createElement('div');
-    headerElement.className = 'chat-message-header';
-    
-    // 设置发送者名称
-    const senderElement = document.createElement('span');
-    senderElement.className = 'chat-message-sender';
-    // 根据发送者身份设置显示名称
+    messageElement.className = 'message-item'; // 使用新的类名
+    messageElement.style.borderBottom = '1px solid #eee';
+    messageElement.style.padding = '10px 0';
+    messageElement.style.marginBottom = '10px';
+
+    // 根据发送者添加不同的类
     if (message.sender === 'master') {
-      senderElement.textContent = '主人';
+      messageElement.classList.add('message-master');
     } else if (message.sender === 'puppy') {
-      senderElement.textContent = '乐乐';
-    } else {
-      senderElement.textContent = message.sender || '未知';
+      messageElement.classList.add('message-puppy');
     }
-    
-    // 设置发送时间
-    const timeElement = document.createElement('span');
-    timeElement.className = 'chat-message-time';
-    timeElement.textContent = new Date(message.timestamp).toLocaleString();
-    
-    // 添加发送者和时间到头部
-    headerElement.appendChild(senderElement);
-    headerElement.appendChild(timeElement);
-    
-    // 创建消息内容
-    const contentElement = document.createElement('div');
-    contentElement.className = 'chat-message-content';
-    contentElement.textContent = message.content;
-    
-    // 将头部和内容添加到消息元素
-    messageElement.appendChild(headerElement);
-    messageElement.appendChild(contentElement);
-    
-    // 将消息添加到容器
-    chatMessagesContainer.appendChild(messageElement);
+
+    const senderElement = document.createElement('div');
+    senderElement.style.fontWeight = 'bold';
+    senderElement.textContent = message.sender === 'master' ? '主人' : '乐乐';
+
+    const textElement = document.createElement('div');
+    textElement.textContent = message.text;
+    textElement.style.marginTop = '5px';
+
+    const timeElement = document.createElement('div');
+    timeElement.style.fontSize = '0.8em';
+    timeElement.style.color = '#666';
+    timeElement.style.textAlign = 'right';
+    timeElement.textContent = new Date(message.timestamp).toLocaleString(); // 显示完整时间
+
+    messageElement.appendChild(senderElement);
+    messageElement.appendChild(textElement);
+    messageElement.appendChild(timeElement);
+
+    messagesContainer.appendChild(messageElement);
   });
-  
-  // 滚动到最新消息
-  chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
-  
-  // 更新未读消息计数
-  updateUnreadMessageCount();
+}
+
+// 新增：初始化留言板函数
+function initMessageBoard() {
+  // 检查元素是否存在
+  const messagePanel = document.getElementById('chatPanel'); // 沿用 chatPanel ID
+  const messageInput = document.getElementById('chatInput'); // 沿用 chatInput ID
+  const sendButton = document.getElementById('sendChatButton'); // 沿用 sendChatButton ID
+  const messagesContainer = document.getElementById('chatMessages'); // 沿用 chatMessages ID
+
+  // 如果元素不存在，则提前返回
+  if (!messagePanel || !messageInput || !sendButton || !messagesContainer) {
+    console.warn('留言板元素未找到，跳过初始化');
+    return;
+  }
+
+  // 发送按钮点击事件
+  sendButton.addEventListener('click', () => {
+    if (messageInput.value.trim() !== '') {
+      addMessage(loginIdentity, messageInput.value); // 调用新的添加留言函数
+      messageInput.value = '';
+    }
+  });
+
+  // 输入框回车事件
+  messageInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendButton.click();
+    }
+  });
+
+  // 初始渲染留言
+  renderMessageBoard();
 }
 
 // 确保登录后设置正确的身份
@@ -1726,59 +1642,17 @@ function login(identity, password) {
     loginIdentity = 'master';
     showMessage('主人登录成功！', 3000);
     // 更新UI显示登录状态
-    updateLoginStatus();
+    // updateLoginStatus(); // Assuming updateLoginStatus is not needed or handled elsewhere
     return true;
   } else if (identity === 'puppy' && password === PUPPY_PASSWORD) {
     loginIdentity = 'puppy';
     showMessage('小狗登录成功！', 3000);
     // 更新UI显示登录状态
-    updateLoginStatus();
+    // updateLoginStatus(); // Assuming updateLoginStatus is not needed or handled elsewhere
     return true;
   } else {
     showMessage('密码错误，请重试', 3000);
     return false;
   }
-}
-
-// 添加初始化聊天界面的函数
-function initChatPanel() {
-  // 检查元素是否存在
-  const chatPanel = document.getElementById('chatPanel');
-  const chatInput = document.getElementById('chatInput');
-  const sendButton = document.getElementById('sendChatButton');
-  const chatMessages = document.getElementById('chatMessages');
-  
-  // 如果元素不存在，则提前返回
-  if (!chatPanel || !chatInput || !sendButton || !chatMessages) {
-    console.warn('聊天面板元素未找到，跳过初始化');
-    return;
-  }
-  
-  // 发送按钮点击事件
-  sendButton.addEventListener('click', () => {
-    if (chatInput.value.trim() !== '') {
-      addChatMessage(loginIdentity, chatInput.value);
-      chatInput.value = '';
-    }
-  });
-  
-  // 输入框回车事件
-  chatInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendButton.click();
-    }
-  });
-  
-  // 当聊天面板打开时，标记所有消息为已读
-  document.querySelector('.accordion[onclick="window.togglePanel(\'chatPanel\')"]').addEventListener('click', () => {
-    setTimeout(() => {
-      markAllMessagesAsRead();
-      renderChatMessages();
-    }, 300);
-  });
-  
-  // 初始渲染聊天消息
-  renderChatMessages();
 }
 
