@@ -22,6 +22,10 @@ let loginIdentity = ''; // 记录登录身份：'puppy' 或 'master'
 // 添加聊天消息相关变量
 let chatMessages = []; // 存储聊天消息
 
+// 新增：签到相关全局变量
+let lastCheckInDate = null; // YYYY-MM-DD格式
+let consecutiveCheckInDays = 0;
+
 
 // 初始化Firebase应用
 let app;
@@ -111,13 +115,18 @@ function loadAllData() {
         loginIdentity = data.loginIdentity || '';
         // 从缓存加载留言数据
         chatMessages = data.chatMessages || [];
+        // 新增：从缓存加载签到数据
+        lastCheckInDate = data.lastCheckInDate || null;
+        consecutiveCheckInDays = data.consecutiveCheckInDays || 0;
+
         // 更新界面
         updateDisplay();
         updateDaysDisplay();
         renderDailyTasks();
         renderWishes();
         renderMessageBoard();
-        
+        initCheckIn(); // 新增：初始化签到状态
+
         // 隐藏加载指示器
         document.body.removeChild(loadingIndicator);
         
@@ -147,6 +156,9 @@ function loadAllData() {
       dailyTasks = data.dailyTasks || [];
       wishes = data.wishes || [];
       chatMessages = data.chatMessages || [];
+      // 新增：加载签到数据
+      lastCheckInDate = data.lastCheckInDate || null;
+      consecutiveCheckInDays = data.consecutiveCheckInDays || 0;
 
       loginIdentity = data.loginIdentity || '';
       
@@ -173,6 +185,7 @@ function loadAllData() {
       updateDaysDisplay();
       renderDailyTasks();
       renderWishes();
+      initCheckIn(); // 新增：初始化签到状态
       
       // 添加错误处理，防止聊天功能影响其他功能
       try {
@@ -191,6 +204,9 @@ function loadAllData() {
           wishes,
           chatMessages,
           loginIdentity,
+          // 新增：缓存签到数据
+          lastCheckInDate,
+          consecutiveCheckInDays,
           timestamp: Date.now()
         };
         localStorage.setItem('puppyAppData', JSON.stringify(cacheData));
@@ -234,6 +250,9 @@ function saveScore() {
     wishes,
     chatMessages: chatMessages,
     loginIdentity,
+    // 新增：保存签到数据
+    lastCheckInDate,
+    consecutiveCheckInDays,
     dailyClickReward: {
       date: lastClickRewardDate,
       amount: dailyClickReward
@@ -401,6 +420,139 @@ function updateDisplay() {
   }
 }
 
+// 新增：获取YYYY-MM-DD格式的日期字符串
+function getFormattedDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+// 新增：签到相关函数
+function initCheckIn() {
+  const today = new Date();
+  const todayFormatted = getFormattedDate(today);
+  const checkInBtn = document.getElementById('checkInBtn');
+  const checkInStatusEl = document.getElementById('checkInStatus');
+
+  if (!checkInBtn || !checkInStatusEl) {
+    console.error("签到按钮或状态元素未找到");
+    return;
+  }
+
+  if (lastCheckInDate) {
+    const lastDate = new Date(lastCheckInDate); // 假设 lastCheckInDate 是 YYYY-MM-DD
+    
+    // 将日期设置为当天的开始，以避免时区问题影响天数计算
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const lastDateStart = new Date(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate());
+
+    const diffTime = todayStart.getTime() - lastDateStart.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays > 1) { // 如果不是昨天签到，即中断
+      if (score >= 10) { // 确保有足够分数扣除
+          score -= 10;
+          log.push({
+              time: Date.now(),
+              action: "中断签到扣分",
+              points: -10
+          });
+          showMessage("签到中断，扣除10分", 3000);
+      } else {
+          showMessage("签到中断，但分数不足以扣除", 3000);
+      }
+      consecutiveCheckInDays = 0;
+      saveScore(); // 保存扣分和连续天数重置
+    } else if (diffDays === 0 && lastCheckInDate === todayFormatted) {
+      // 今天已经签到过了 (diffDays === 0 意味着 lastCheckInDate 是今天)
+      // 此处逻辑在 handleCheckIn 中处理，initCheckIn 主要处理隔天逻辑
+    }
+  } else {
+    // 首次使用或数据重置
+    consecutiveCheckInDays = 0;
+  }
+  updateCheckInUI();
+}
+
+function handleCheckIn() {
+  const todayFormatted = getFormattedDate(new Date());
+  const checkInBtn = document.getElementById('checkInBtn');
+
+  if (lastCheckInDate === todayFormatted) {
+    showMessage("今天已经签到过了！", 3000);
+    checkInBtn.disabled = true;
+    checkInBtn.querySelector('div').textContent = '今日已签到';
+    return;
+  }
+
+  let pointsEarned = 5;
+  // 检查昨天是否签到，以正确增加连续签到天数
+  if (lastCheckInDate) {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      if (getFormattedDate(yesterday) === lastCheckInDate) {
+          consecutiveCheckInDays++;
+      } else {
+          // 如果昨天没签到，但也不是更早（这种情况已在initCheckIn处理断签），则从1开始
+          // 如果lastCheckInDate不是昨天，说明是断签后首次签到，或首次签到
+          consecutiveCheckInDays = 1; 
+      }
+  } else {
+      // 首次签到
+      consecutiveCheckInDays = 1;
+  }
+
+
+  if (consecutiveCheckInDays >= 7) {
+    pointsEarned = 15;
+  } else if (consecutiveCheckInDays >= 3) {
+    pointsEarned = 10;
+  }
+
+  score += pointsEarned;
+  lastCheckInDate = todayFormatted;
+  
+  log.push({
+    time: Date.now(),
+    action: `每日签到 (连续${consecutiveCheckInDays}天)`,
+    points: pointsEarned
+  });
+
+  saveScore();
+  updateCheckInUI();
+  updateDisplay(); // 更新总积分和日志显示
+  showSpecialMessage(pointsEarned);
+  showMessage(`签到成功！获得 ${pointsEarned} 积分，已连续签到 ${consecutiveCheckInDays} 天。`, 3000);
+}
+
+function updateCheckInUI() {
+  const checkInBtn = document.getElementById('checkInBtn');
+  const checkInStatusEl = document.getElementById('checkInStatus');
+  const todayFormatted = getFormattedDate(new Date());
+
+  if (!checkInBtn || !checkInStatusEl) return;
+
+  if (lastCheckInDate === todayFormatted) {
+    checkInBtn.querySelector('div').textContent = '今日已签到';
+    checkInBtn.disabled = true;
+    checkInBtn.classList.remove('add-btn');
+    checkInBtn.classList.add('store-btn'); // 改为商店按钮样式或自定义已签到样式
+  } else {
+    checkInBtn.querySelector('div').textContent = '签到';
+    checkInBtn.disabled = false;
+    checkInBtn.classList.add('add-btn');
+    checkInBtn.classList.remove('store-btn');
+  }
+  checkInStatusEl.textContent = `已连续签到 ${consecutiveCheckInDays} 天`;
+  
+  // 更新面板高度
+  const checkInPanel = document.getElementById('checkInPanel');
+  if (checkInPanel && checkInPanel.style.maxHeight) {
+      checkInPanel.style.maxHeight = checkInPanel.scrollHeight + "px";
+  }
+}
+
 function updateDaysDisplay() {
   const daysElement = document.getElementById('accompanyDays');
   if (daysElement) {
@@ -539,6 +691,8 @@ function renderDailyTasks() {
   if (dailyTaskPanel && dailyTaskPanel.style.maxHeight) {
     dailyTaskPanel.style.maxHeight = dailyTaskPanel.scrollHeight + "px";
   }
+  // 新增：确保签到面板也更新高度
+  updateCheckInUI();
 }
 
 // 小狗相关函数
@@ -708,7 +862,7 @@ function initPuppy() {
           speechBubble.style.opacity = "1";
           setTimeout(() => {
             speechBubble.style.opacity = "0";
-          }, 4000);
+          }, 1000);
         }
         updatePuppyState(0);
       } else {
@@ -1163,10 +1317,9 @@ const rules = {
   ]
 };
 
-// ==================== 初始化函数 ====================
+// ==================== 事件监听器 ====================
 
-// 页面加载完成后初始化
-window.onload = function() {
+document.addEventListener('DOMContentLoaded', () => {
   // 先加载所有数据
   loadAllData();
   
@@ -1343,6 +1496,12 @@ window.onload = function() {
   } else {
     console.error('未找到ID为addWishBtn的元素，请检查HTML');
   }
+
+  // 新增：签到按钮事件监听
+  const checkInBtn = document.getElementById('checkInBtn');
+  if (checkInBtn) {
+    checkInBtn.addEventListener('click', handleCheckIn);
+  }
   
   // 显示管理控制按钮（对所有用户都显示）
   const taskAdminControls = document.getElementById('taskAdminControls');
@@ -1384,7 +1543,7 @@ window.onload = function() {
   // if (dailyTaskPanel) {
   //   dailyTaskPanel.style.maxHeight = dailyTaskPanel.scrollHeight + "px";
   // }
-};
+});
 
 // 保存小狗愿望到Firebase
 function saveWishes() {
