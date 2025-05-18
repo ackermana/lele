@@ -11,5 +11,5 @@ export const firebaseConfig = {
 };
 
 // 登录密码
-export const ADMIN_PASSWORD = "xiaohao";
+export const ADMIN_PASSWORD = "qwer0000";
 export const PUPPY_PASSWORD = "lele";

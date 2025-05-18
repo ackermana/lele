@@ -673,11 +673,6 @@
             word-break: break-word;
         }
 
-        .chat-message-self {
-            margin-left: auto;
-            background-color: #e8f5e9; /* 修改为绿色背景 */
-        }
-
         /* 新增：消息头部样式 */
         .chat-message-header {
             display: flex;
@@ -709,10 +704,6 @@
             margin-top: 4px;
         }
 
-        .chat-message-status {
-            color: #4CAF50;
-        }
-
         /* 保留原有的其他样式 */
         .chat-input-container {
             display: flex;
@@ -726,6 +717,7 @@
             border-radius: 4px;
             resize: none;
             height: 40px;
+            font-size: 16px; /* 添加或修改这一行 */
         }
 
         #sendChatButton {
@@ -742,67 +734,7 @@
             opacity: 0.9;
         }
 
-        .chat-message {
-            margin-bottom: 12px;
-            padding: 8px 12px;
-            border-radius: 8px;
-            max-width: 80%;
-            word-break: break-word;
-        }
-
-        .self-message {
-            align-self: flex-end;
-            background-color: #dcf8c6;
-            margin-left: auto;
-        }
-
-        .other-message {
-            align-self: flex-start;
-            background-color: white;
-            margin-right: auto;
-        }
-
-        .message-header {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.8em;
-            color: #666;
-            margin-bottom: 4px;
-        }
-
-        .message-sender {
-            font-weight: bold;
-        }
-
-        .message-content {
-            line-height: 1.4;
-        }
-
-        .read-status {
-            font-size: 0.8em;
-            color: var(--primary);
-        }
-
-        .empty-chat {
-            text-align: center;
-            color: #999;
-            padding: 20px;
-        }
-
-        .unread-badge {
-            position: absolute;
-            top: -5px;
-            right: -5px;
-            background-color: #ff4d4f;
-            color: white;
-            border-radius: 50%;
-            width: 18px;
-            height: 18px;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+ 
 
         /* 新增：不同身份的留言样式 */
         .message-item {
