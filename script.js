@@ -790,8 +790,8 @@ function initPuppy() {
         lastClickRewardDate = today;
       }
 
-      // 先判断是否触发奖励（20%概率）
-      const rewardProb = 0.2;
+      // 先判断是否触发奖励（25%概率）
+      const rewardProb = 0.25;
       const rewardTriggered = Math.random() < rewardProb;
 
       // 奖励分数分布
@@ -869,6 +869,24 @@ function initPuppy() {
         // 随机显示普通消息
         const normalMessages = [
           "汪汪~",
+          "爸爸~",
+          "老公~",
+          "我不是傻狗！",
+          "主人...",
+          "（摇屁股",
+          "是主人的小狗呀~",
+          "我是小贱狗~",
+          "主人，我好饿~",
+          "主人喝水~",
+          "一起咕咚咕咚！",
+          "主人，好痒~",
+          "好痒啊~",
+          "主人，我想睡觉~",
+          "嗯呐~",
+          "我好委屈~",
+          "我不是哭哭！",
+          "主人，我要学习！",
+          "主人，我要玩~",
           "主人好~",
           "摸摸头~",
           "乐乐爱主人~",
@@ -876,6 +894,7 @@ function initPuppy() {
           "主人陪我玩~",
           "乐乐想吃零食~",
           "抱抱我~",
+          "叫姐姐~",
           "主人，小狗爱您！",
           "摸摸小狗有奖励哦~",
           "摸摸我嘛~",
@@ -1284,7 +1303,7 @@ window.togglePanel = togglePanel;
 
 const rules = {
   deductions: [
-    {name: "没有早安吻、晚安吻", points: 20, desc: "每天"},
+    {name: "没有早安晚安吻", points: 20, desc: "每天"},
     {name: "没有及时报备", points: 20},
     {name: "睡前没有说爱主人", points: 20},
     {name: "敷衍主人", points: 30},
@@ -1295,10 +1314,10 @@ const rules = {
     {name: "其他惹主人生气行为", points: 10, desc: "无上限"}
   ],
   additions: [
-    {name: "一天表现良好", points: 10, desc: "上限30"},
-    {name: "及时报备", points: 10, desc: "每天上限20"},
-    {name: "发语音", points: 10, desc: "每天上限20分"},
-    {name: "发照片", points: 10, desc: "每天上限30分"},
+    {name: "一天表现好", points: 10, desc: "上限30"},
+    {name: "及时报备", points: 10},
+    {name: "发语音", points: 5, desc: "每天上限20分"},
+    {name: "发照片", points: 5, desc: "每天上限30分"},
     {name: "发视频", points: 10, desc: "每天上限40分+奖"},
     {name: "打电话", points: 10, desc: "每天上限40分+奖"},
     {name: "一天黏主人", points: 10},
@@ -1309,10 +1328,10 @@ const rules = {
   store: [
     {name: "抱抱", cost: 0},
     {name: "亲亲", cost: 0},
-    {name: "主人照片", cost: 30},
-    {name: '零食大礼包', cost: 30, desc: '主人给你买' },
-    {name: "文字涩涩", cost: 40, desc: "次数：数不清了"},
-    {name: "语音涩涩", cost: 60, desc: "次数：3/10"},
+    {name: "主人照片", cost: 30, desc: "主人主动发的也算"},
+    {name: '零食大礼包', cost: 30, desc: "主人给你买"},
+    {name: "文字涩涩", cost: 50, desc: "数不清了"},
+    {name: "语音涩涩", cost: 80, desc: "每周不能超过两次！"},
     {name: "神秘礼物", cost: 300, desc: "每次兑换加100"}
   ]
 };
