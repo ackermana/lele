@@ -602,7 +602,7 @@ function renderDailyTasks() {
       <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''}>
       <div class="task-content">
         <div class="task-name">${task.name}</div>
-        <div class="task-points">完成可得 +${task.points} 分</div>
+        <div class="task-points"> +${task.points} 分</div>
       </div>
       <div class="wish-controls"> 
           <button class="move-btn ${index === 0 ? 'disabled' : ''}" title="上移" ${index === 0 ? 'disabled' : ''}><i class="fas fa-arrow-up"></i></button>
