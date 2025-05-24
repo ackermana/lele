@@ -124,7 +124,7 @@ function loadAllData() {
         updateDaysDisplay();
         renderDailyTasks();
         renderWishes();
-        renderMessageBoard();
+        displayMessages(chatMessages); // Updated function call
         initCheckIn(); // 新增：初始化签到状态
 
         // 隐藏加载指示器
@@ -189,7 +189,7 @@ function loadAllData() {
       
       // 添加错误处理，防止聊天功能影响其他功能
       try {
-        renderMessageBoard(); 
+        displayMessages(chatMessages); // Updated function call
       } catch (error) {
         console.error("渲染留言板消息时出错:", error);
       }
@@ -333,9 +333,9 @@ function checkAndUpdateDays() {
   // 获取上次更新的日期
   const lastUpdate = localStorage.getItem(lastUpdateKey);
   const today = now.toDateString();
-  
-  // 如果是新的一天（过了午夜）
-  if (lastUpdate !== today && now.getHours() >= 0) {
+
+  // 如果是新的一天
+  if (lastUpdate !== today) {
     accompanyDays++;
     localStorage.setItem(lastUpdateKey, today);
     updateDaysDisplay();
@@ -356,7 +356,7 @@ function checkAndUpdateDays() {
       }, 5000);
     }
     
-    // 添加这一行：在新的一天重置每日任务
+    // 在新的一天重置每日任务
     resetDailyTasks();
   }
 }
@@ -368,8 +368,8 @@ function resetDailyTasks() {
   const lastReset = localStorage.getItem(lastResetKey);
   const today = now.toDateString();
   
-  // 如果是新的一天（过了午夜）且还没有重置过
-  if (lastReset !== today && now.getHours() >= 0) {
+  // 如果是新的一天且还没有重置过
+  if (lastReset !== today) {
     console.log("重置每日任务状态...");
     
     // 将所有任务标记为未完成
@@ -608,10 +608,12 @@ function renderDailyTasks() {
         <div class="task-points">完成可得 +${task.points} 分</div>
       </div>
       <div class="task-controls">
-        <button class="move-btn ${index === 0 ? 'disabled' : ''}" title="上移" ${index === 0 ? 'disabled' : ''}><i class="fas fa-arrow-up"></i></button>
-        <button class="move-btn ${index === dailyTasks.length - 1 ? 'disabled' : ''}" title="下移" ${index === dailyTasks.length - 1 ? 'disabled' : ''}><i class="fas fa-arrow-down"></i></button>
-        <button class="task-edit-btn" title="编辑"><i class="fas fa-edit"></i></button>
-        <button class="task-delete-btn" title="删除"><i class="fas fa-trash"></i></button>
+        <div class="task-btn-grid">
+          <button class="move-btn ${index === 0 ? 'disabled' : ''}" title="上移" ${index === 0 ? 'disabled' : ''}><i class="fas fa-arrow-up"></i></button>
+          <button class="move-btn ${index === dailyTasks.length - 1 ? 'disabled' : ''}" title="下移" ${index === dailyTasks.length - 1 ? 'disabled' : ''}><i class="fas fa-arrow-down"></i></button>
+          <button class="task-edit-btn" title="编辑"><i class="fas fa-edit"></i></button>
+          <button class="task-delete-btn" title="删除"><i class="fas fa-trash"></i></button>
+        </div>
       </div>
     `;
     
@@ -1280,11 +1282,15 @@ loginBtn.addEventListener('click', function() {
 // 面板切换函数
 function togglePanel(panelId) {
   const panel = document.getElementById(panelId);
+  const accordion = panel.previousElementSibling; // 获取对应的accordion元素
+  
   if (panel) {
     if (panel.style.maxHeight) {
       panel.style.maxHeight = null;
+      accordion.classList.remove('active'); // 移除active类
     } else {
       panel.style.maxHeight = panel.scrollHeight + "px";
+      accordion.classList.add('active'); // 添加active类
       
       // 如果是留言板面板，则渲染消息
       if (panelId === 'chatPanel') { // 沿用 chatPanel ID
@@ -1725,30 +1731,32 @@ function addMessage(sender, messageText) {
   };
   chatMessages.push(newMessage);
   saveMessages(); // 保存到Firebase (使用新的保存函数)
-  renderMessageBoard(); // 立即更新显示
+  displayMessages(chatMessages); // Updated function call // 立即更新显示
 }
 
 // 新增：渲染留言板消息函数
-function renderMessageBoard() {
+function displayMessages(messages) { // Changed name and added parameter
   const messagesContainer = document.getElementById('chatMessages'); // 沿用 chatMessages ID
-  if (!messagesContainer) return;
+  if (!messagesContainer) {
+    console.warn('Messages container not found.'); // Added console.warn from plan
+    return;
+  }
 
   messagesContainer.innerHTML = ''; // 清空现有消息
 
-  // 倒序显示最新留言在最上面
-  const reversedMessages = [...chatMessages].reverse();
-
-  if (reversedMessages.length === 0) {
+  // 遍历消息数组，从旧到新添加，使最新消息在底部
+  // Removed reverse()
+  if (messages.length === 0) { // Keep empty state message
     messagesContainer.innerHTML = '<div style="text-align:center; padding: 10px; color: #999;">暂无留言</div>';
     return;
   }
 
-  reversedMessages.forEach(message => {
+  messages.forEach(message => { // Iterate directly over messages
     const messageElement = document.createElement('div');
-    messageElement.className = 'message-item'; // 使用新的类名
-    messageElement.style.borderBottom = '1px solid #eee';
-    messageElement.style.padding = '10px 0';
-    messageElement.style.marginBottom = '10px';
+    messageElement.classList.add('message'); // Changed class name and method
+    messageElement.style.marginBottom = '10px'; // Kept this style
+
+    // Removed borderBottom style
 
     // 根据发送者添加不同的类
     if (message.sender === 'master') {
@@ -1777,6 +1785,9 @@ function renderMessageBoard() {
 
     messagesContainer.appendChild(messageElement);
   });
+
+  // 新增：滚动到最新消息（底部）
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
 
 // 新增：初始化留言板函数
@@ -1810,7 +1821,7 @@ function initMessageBoard() {
   });
 
   // 初始渲染留言
-  renderMessageBoard();
+  displayMessages(chatMessages); // Updated function call
 }
 
 // 确保登录后设置正确的身份
