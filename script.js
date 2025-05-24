@@ -589,14 +589,11 @@ function updateClock() {
 function renderDailyTasks() {
   const tasksContainer = document.getElementById('dailyTasks');
   if (!tasksContainer) return;
-  
   tasksContainer.innerHTML = '';
-  
   if (dailyTasks.length === 0) {
     tasksContainer.innerHTML = '<div style="text-align:center; padding: 10px; color: #999;">暂无任务，请添加</div>';
     return;
   }
-  
   dailyTasks.forEach((task, index) => {
     const taskItem = document.createElement('div');
     taskItem.className = `task-item ${task.completed ? 'task-completed' : ''}`;
@@ -607,13 +604,11 @@ function renderDailyTasks() {
         <div class="task-name">${task.name}</div>
         <div class="task-points">完成可得 +${task.points} 分</div>
       </div>
-      <div class="task-controls">
-        <div class="task-btn-grid">
+      <div class="wish-controls"> 
           <button class="move-btn ${index === 0 ? 'disabled' : ''}" title="上移" ${index === 0 ? 'disabled' : ''}><i class="fas fa-arrow-up"></i></button>
           <button class="move-btn ${index === dailyTasks.length - 1 ? 'disabled' : ''}" title="下移" ${index === dailyTasks.length - 1 ? 'disabled' : ''}><i class="fas fa-arrow-down"></i></button>
           <button class="task-edit-btn" title="编辑"><i class="fas fa-edit"></i></button>
           <button class="task-delete-btn" title="删除"><i class="fas fa-trash"></i></button>
-        </div>
       </div>
     `;
     

@@ -235,12 +235,10 @@
         .task-item:hover {
             background: #f0f0f0;
         }
-        
-        .task-checkbox {
-            margin-right: 10px;
-            width: 20px;
-            height: 20px;
-            cursor: pointer;
+        .task-checkbox, .wish-checkbox {
+          width: 16px;
+          height: 16px;
+          margin-right: 6px;
         }
         
         .task-content {
@@ -381,16 +379,11 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             grid-template-rows: 1fr 1fr;
-            gap: 5px;
+            gap: 2px;
         }
-        
-        .wish-edit-btn, .wish-delete-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            color: #999;
-            transition: color 0.3s;
-            font-size: 14px;
+        .task-edit-btn, .task-delete-btn, .wish-edit-btn, .wish-delete-btn, .move-btn {
+          font-size: 13px;
+          padding: 0 3px;
         }
         
         .wish-edit-btn:hover {
@@ -483,11 +476,14 @@
                 <div class="wish-items" id="wishItems">
                     <!-- 愿望列表将通过JavaScript动态生成 -->
                 </div>
-                <div class="wish-controls" id="wishControls" style="margin-top: 15px;">
+                <!-- 将添加新愿望按钮移到这里，不再包含在 wish-controls div 中 -->
+                <div class="admin-controls" id="wishAdminControls" style="margin-top: 15px;"> 
                     <button class="btn add-btn" id="addWishBtn" style="width: 100%;">
                         <div style="text-align:center; width: 100%;">添加新愿望</div>
                     </button>
                 </div>
+                <!-- 原来的 wish-controls div 可以移除或者保留用于其他可能的控制，但添加按钮不应在此 -->
+                <!-- <div class="wish-controls" id="wishControls" style="margin-top: 15px;"></div> -->
                 <div class="note">
                     小狗可以添加自己的愿望，主人可以帮忙实现哦~<br>
                     实现愿望后主人会划掉它！
