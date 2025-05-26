@@ -42,17 +42,6 @@
             transition: transform 0.3s, box-shadow 0.3s;
         }
         
-        /* 添加新的样式，使卡片在折叠状态下更紧凑 */
-        .accordion {
-            margin: 0; /* 减少外边距 */
-            cursor: pointer;
-            padding: 8px;
-            border-radius: 8px;
-            background: #f8f8f8;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
 
         /* 修改标题样式，使其在折叠状态下更紧凑 */
         .accordion h2 {
@@ -93,9 +82,9 @@
         }
 
         .accordion {
-            margin: 8px 0;
+            margin: 2px 0;
             cursor: pointer;
-            padding: 8px;
+            padding: 15px 8px;  /* 修改这里：从8px改为12px 8px，增加上下内边距 */
             border-radius: 8px;
             background: #f8f8f8;
             display: flex;
@@ -774,16 +763,17 @@
             box-shadow: 0 1px 2px rgba(0,0,0,0.1);
             max-width: 80%;
             word-break: break-word;
+
         }
 
         .message-master {
             margin-left: auto; /* 主人的消息靠右 */
-            background-color: #9bfac669; /* 浅绿色背景 */
+            background-color: #d9fce9e1; /* 浅绿色背景 */
         }
 
         .message-puppy {
             margin-right: auto; /* 乐乐的消息靠左 */
-            background-color: #fdd6dc75; /* 浅红色背景 */
+            background-color: #fddfe4be; /* 浅红色背景 */
         }
     </style>
 </body>

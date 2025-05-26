@@ -368,8 +368,15 @@ function resetDailyTasks() {
   const lastReset = localStorage.getItem(lastResetKey);
   const today = now.toDateString();
   
-  // 如果是新的一天且还没有重置过
-  if (lastReset !== today) {
+  // 获取上次访问的日期（新增）
+  const lastVisitKey = 'lastVisitDate';
+  const lastVisit = localStorage.getItem(lastVisitKey);
+  
+  // 更新上次访问日期为今天（新增）
+  localStorage.setItem(lastVisitKey, today);
+  
+  // 如果是新的一天且还没有重置过，或者上次访问日期与今天不同（跨越了午夜）
+  if (lastReset !== today || (lastVisit && lastVisit !== today)) {
     console.log("重置每日任务状态...");
     
     // 将所有任务标记为未完成
