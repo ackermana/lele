@@ -375,8 +375,8 @@ function resetDailyTasks() {
   // 更新上次访问日期为今天（新增）
   localStorage.setItem(lastVisitKey, today);
   
-  // 如果是新的一天且还没有重置过，或者上次访问日期与今天不同（跨越了午夜）
-  if (lastReset !== today || (lastVisit && lastVisit !== today)) {
+  // 如果是新的一天且还没有重置过，且上次访问日期与今天不同（跨越了午夜）
+  if ((!lastReset || lastReset !== today) && (lastVisit && lastVisit !== today)) {
     console.log("重置每日任务状态...");
     
     // 将所有任务标记为未完成
@@ -399,7 +399,10 @@ function resetDailyTasks() {
     localStorage.setItem(lastResetKey, today);
   }
 }
-
+  window.addEventListener('load', () => {
+    resetDailyTasks();
+    setInterval(resetDailyTasks, 60 * 1000);
+  });
 // ==================== UI更新函数 ====================
 
 function updateDisplay() {
