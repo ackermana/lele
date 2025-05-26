@@ -41,6 +41,11 @@
             box-shadow: 0 3px 10px rgba(0,0,0,0.1);
             transition: transform 0.3s, box-shadow 0.3s;
         }
+
+        /* 添加留言板卡片的特殊样式 */
+        .card.chat-card {
+            grid-column: span 2; /* 横跨两列 */
+        }
         
 
         /* 修改标题样式，使其在折叠状态下更紧凑 */
@@ -522,7 +527,7 @@
     
 
         <!-- 聊天面板 --> 
-        <div class="card"> 
+        <div class="card chat-card"> 
             <div class="accordion" onclick="window.togglePanel('chatPanel')"> 
                 <h2>💬 留言板</h2> 
                 <i class="fas fa-chevron-down"></i> 
@@ -679,6 +684,7 @@
             border-radius: 8px;
             margin-bottom: 10px;
             min-height: 200px;
+            
         }
 
         /* 修改聊天消息样式 */
@@ -688,7 +694,7 @@
             border-radius: 8px;
             background-color: white;
             box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-            max-width: 85%;
+            max-width: 50%; /* 修改这里，将最大宽度设置为50% */
             word-break: break-word;
         }
 
@@ -753,19 +759,8 @@
             opacity: 0.9;
         }
 
- 
 
         /* 新增：不同身份的留言样式 */
-        .message-item {
-            margin-bottom: 12px;
-            padding: 8px 12px;
-            border-radius: 8px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-            max-width: 80%;
-            word-break: break-word;
-
-        }
-
         .message-master {
             margin-left: auto; /* 主人的消息靠右 */
             background-color: #d9fce9e1; /* 浅绿色背景 */
