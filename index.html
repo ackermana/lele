@@ -6,7 +6,14 @@
     <title>乐乐的小窝 🐾</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="apple-touch-icon" href="images/icon.png">
+    <link rel="icon" type="image/png" href="images/icon.png">
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="乐乐的小窝">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#ff7eb9">
+    <link rel="manifest" href="manifest.json">
+    
     <style>
         :root {
             --primary: #ff7eb9;
@@ -14,8 +21,8 @@
             --bg: linear-gradient(to right, #fff0f5, #f0f8ff);
             --login-gradient: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
             --login-btn-gradient: linear-gradient(90deg, #ff7eb9 0%, #7afcff 0%);
-            --home-color: #8a6e52; /* 新增：温暖的家的颜色 */
-            --paw-color: #ffc0cb; /* 新增：爪印颜色 */
+            --home-color: #8a6e52;
+            --paw-color: #ffc0cb;
         }
 
         body {
@@ -29,7 +36,7 @@
 
         .dashboard {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* 修改最小宽度从250px到150px */
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             gap: 15px;
             margin-bottom: 20px;
         }
@@ -44,28 +51,28 @@
 
         /* 添加留言板卡片的特殊样式 */
         .card.chat-card {
-            grid-column: span 2; /* 横跨两列 */
+            grid-column: span 2;
         }
         
 
         /* 修改标题样式，使其在折叠状态下更紧凑 */
         .accordion h2 {
-            font-size: 1rem; /* 减小字体大小 */
-            margin: 0; /* 移除外边距 */
+            font-size: 1rem;
+            margin: 0;
         }
 
         /* 添加展开状态的样式 */
         .accordion.active h2 {
-            font-size: 1.2rem; /* 展开时恢复字体大小 */
+            font-size: 1.2rem;
         }
 
         /* 添加媒体查询，在小屏幕上进一步优化 */
         @media (max-width: 480px) {
             .dashboard {
-                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); /* 在手机上进一步减小 */
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
             }
             .accordion h2 {
-                font-size: 0.9rem; /* 在手机上进一步减小字体 */
+                font-size: 0.9rem;
             }
         }
         .card:hover {
@@ -89,7 +96,7 @@
         .accordion {
             margin: 2px 0;
             cursor: pointer;
-            padding: 15px 8px;  /* 修改这里：从8px改为12px 8px，增加上下内边距 */
+            padding: 15px 8px;
             border-radius: 8px;
             background: #f8f8f8;
             display: flex;
@@ -123,14 +130,13 @@
             justify-content: space-between;
             align-items: center;
             font-weight: 500;
-            margin-bottom: 5px; /* 添加按钮底部间距 */
-            /* 移除这里的width: 100% */
+            margin-bottom: 5px;
         }
         
         /* 添加新的选择器，只针对按钮组内的按钮 */
         .btn-group .btn {
             width: 100%;
-            margin-bottom: 8px; /* 增加按钮组内按钮的间距 */
+            margin-bottom: 8px;
         }
         
         /* 确保最后一个按钮没有底部间距 */
@@ -589,7 +595,7 @@
             height: 80px;
             border-radius: 50%;
             box-shadow: 0 3px 10px rgba(0,0,0,0.2);
-            animation: bounce var(--puppy-gif-speed, 1s) infinite; /* 使用CSS变量 */
+            animation: bounce var(--puppy-gif-speed, 1s) infinite;
             animation-timing-function: ease-in-out;
             animation-play-state: running;
             animation-duration: calc(0.5s / var(--puppy-animation-speed, 1));
@@ -672,8 +678,8 @@
             display: flex;
             flex-direction: column;
             height: 100%;
-            max-height: 400px; /* 添加固定高度 */
-            overflow: hidden; /* 防止溢出 */
+            max-height: 400px;
+            overflow: hidden;
         }
 
         .chat-messages {
@@ -684,52 +690,8 @@
             border-radius: 8px;
             margin-bottom: 10px;
             min-height: 200px;
-            
         }
 
-        /* 修改聊天消息样式 */
-        .chat-message {
-            margin-bottom: 12px;
-            padding: 8px 12px;
-            border-radius: 8px;
-            background-color: white;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-            max-width: 50%; /* 修改这里，将最大宽度设置为50% */
-            word-break: break-word;
-        }
-
-        /* 新增：消息头部样式 */
-        .chat-message-header {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 4px;
-            font-size: 0.8em;
-            color: #666;
-        }
-
-        .chat-message-sender {
-            font-weight: bold;
-        }
-
-        .chat-message-time {
-            font-size: 0.9em;
-        }
-
-        /* 新增：消息内容样式 */
-        .chat-message-content {
-            margin: 6px 0;
-        }
-
-        /* 新增：消息底部样式 */
-        .chat-message-footer {
-            display: flex;
-            justify-content: flex-end;
-            font-size: 0.75em;
-            color: #999;
-            margin-top: 4px;
-        }
-
-        /* 保留原有的其他样式 */
         .chat-input-container {
             display: flex;
             margin-top: 10px;
@@ -742,7 +704,7 @@
             border-radius: 4px;
             resize: none;
             height: 40px;
-            font-size: 16px; /* 添加或修改这一行 */
+            font-size: 16px;
         }
 
         #sendChatButton {
@@ -759,22 +721,74 @@
             opacity: 0.9;
         }
 
-
-        /* 新增：不同身份的留言样式 */
         .message-master {
-            margin-left: auto; /* 主人的消息靠右 */
-            background-color: #d9fce9e1; /* 浅绿色背景 */
-            max-width: 75%; /* 添加最大宽度为50% */
-            padding: 6px; /* 减小上下内边距 */
-            font-size: 0.8em; /* 缩小字体大小 */
+            margin-left: auto;
+            background-color: #d9fce9e1;
+            max-width: 75%;
+            padding: 6px;
+            font-size: 0.8em;
+            border-radius: 8px;
+            margin-bottom: 8px;
         }
 
         .message-puppy {
-            margin-right: auto; /* 乐乐的消息靠左 */
-            background-color: #fddfe4be; /* 浅红色背景 */
-            max-width: 75%; /* 添加最大宽度为50% */
-            padding: 6px; /* 减小上下内边距 */
-            font-size: 0.8em; /* 缩小字体大小 */
+            margin-right: auto;
+            background-color: #fddfe4be;
+            max-width: 75%;
+            padding: 6px;
+            font-size: 0.8em;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        
+        #cute-puppy {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            z-index: 1000;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        
+        #puppy-image {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+            animation: bounce var(--puppy-gif-speed, 1s) infinite;
+            animation-timing-function: ease-in-out;
+            animation-play-state: running;
+            animation-duration: calc(0.5s / var(--puppy-animation-speed, 1));
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        
+        #puppy-speech-bubble {
+            position: absolute;
+            top: -40px;
+            left: -20px;
+            background: white;
+            padding: 8px 12px;
+            border-radius: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            font-size: 14px;
+            max-width: 150px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        
+        #puppy-speech-bubble:after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            right: 20px;
+            border-width: 10px 10px 0;
+            border-style: solid;
+            border-color: white transparent;
         }
     </style>
 </body>

@@ -9,20 +9,14 @@ let score = 0; // 当前积分
 let log = []; // 操作日志
 let accompanyDays = 1; // 初始天数设置为51天
 let speechBubble = null; // 用于存储对话气泡元素的引用
-let startDate = new Date('2025-03-14T12:00:00'); // 设置为2025年3月14日中午12点
-// 在全局变量部分添加
+const startDate = new Date('2025-03-14T12:00:00'); // 设置为2025年3月14日中午12点
 let dailyTasks = []; // 添加每日任务数组
 let wishes = []; // 添加小狗愿望数组
-// 添加小狗点击奖励相关变量
 let dailyClickReward = 0; // 今日已获得的点击奖励
 const MAX_DAILY_CLICK_REWARD = 20; // 每日点击奖励上限
 let lastClickRewardDate = ''; // 上次获得点击奖励的日期
-// 添加登录身份变量
 let loginIdentity = ''; // 记录登录身份：'puppy' 或 'master'
-// 添加聊天消息相关变量
 let chatMessages = []; // 存储聊天消息
-
-// 新增：签到相关全局变量
 let lastCheckInDate = null; // YYYY-MM-DD格式
 let consecutiveCheckInDays = 0;
 
@@ -183,7 +177,11 @@ function loadAllData() {
       // 更新界面
       updateDisplay();
       updateDaysDisplay();
+      
+      // 重要：在数据加载完成后再检查是否需要重置任务
+      resetDailyTasks();
       renderDailyTasks();
+      
       renderWishes();
       initCheckIn(); // 新增：初始化签到状态
       
@@ -234,11 +232,7 @@ function loadAllData() {
   }
 }
 
-// 保留原来的loadScore函数以兼容旧代码
-function loadScore() {
-  console.log("使用新的数据加载方法...");
-  loadAllData();
-}
+
 
 function saveScore() {
   // 创建包含所有数据的对象
@@ -363,20 +357,23 @@ function checkAndUpdateDays() {
 
 // 添加重置每日任务的函数
 function resetDailyTasks() {
+  // 如果dailyTasks还没有加载，跳过重置
+  if (!Array.isArray(dailyTasks) || dailyTasks.length === 0) {
+    console.log("任务数据尚未加载，跳过重置检查");
+    return;
+  }
+  
   const now = new Date();
   const lastResetKey = 'lastTasksReset';
   const lastReset = localStorage.getItem(lastResetKey);
-  const today = now.toDateString();
   
-  // 获取上次访问的日期（新增）
-  const lastVisitKey = 'lastVisitDate';
-  const lastVisit = localStorage.getItem(lastVisitKey);
+  // 使用YYYY-MM-DD格式，更可靠
+  const today = now.getFullYear() + '-' + 
+                String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                String(now.getDate()).padStart(2, '0');
   
-  // 更新上次访问日期为今天（新增）
-  localStorage.setItem(lastVisitKey, today);
-  
-  // 如果是新的一天且还没有重置过，且上次访问日期与今天不同（跨越了午夜）
-  if ((!lastReset || lastReset !== today) && (lastVisit && lastVisit !== today)) {
+  // 简化逻辑：只要是新的一天且还没有重置过就执行重置
+  if (!lastReset || lastReset !== today) {
     console.log("重置每日任务状态...");
     
     // 将所有任务标记为未完成
@@ -388,9 +385,9 @@ function resetDailyTasks() {
       }
     });
     
-    // 如果有任务状态被改变，保存到数据库
+    // 如果有任务状态被改变，立即保存到数据库
     if (tasksChanged) {
-      saveDailyTasks();
+      saveDailyTasks(); // 立即保存到Firebase
       renderDailyTasks();
       showMessage("每日任务已重置", 3000);
     }
@@ -582,17 +579,7 @@ function updateDaysDisplay() {
 }
 
 function updateClock() {
-  const clockElement = document.getElementById('clock');
-  if (clockElement) {
-    const now = new Date();
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
-    
-    clockElement.textContent = `${hours}:${minutes}:${seconds}`;
-  }
-  
-  // 同时更新天数显示
+  // 删除对 clockElement 的检查，因为HTML中没有这个元素
   updateDaysDisplay();
 }
 
@@ -1251,28 +1238,61 @@ function initializeStoreForPuppy() {
   });
 }
 
+function handleLogin(password) {
+    let userRole = '';
+    
+    if (password === ADMIN_PASSWORD) {
+        userRole = 'admin';
+        loginIdentity = 'master';
+    } else if (password === PUPPY_PASSWORD) {
+        userRole = 'puppy';
+        loginIdentity = 'puppy';
+    } else {
+        return { success: false, message: '密码错误，请重试' };
+    }
+    
+    // 保存登录状态
+    localStorage.setItem('userRole', userRole);
+    localStorage.setItem('isLoggedIn', 'true');
+    localStorage.setItem('loginIdentity', loginIdentity);
+    
+    // 隐藏登录界面
+    document.getElementById('loginScreen').style.display = 'none';
+    
+    // 显示欢迎消息
+    const welcomeMessage = loginIdentity === 'master' ? '主人~欢迎回家！' : '乐乐~欢迎回家！';
+    showWelcomeMessage(welcomeMessage);
+    
+    // 保存数据到Firebase
+    saveScore();
+    
+    return { success: true, userRole, loginIdentity };
+}
+
+function showWelcomeMessage(message) {
+    if (speechBubble) {
+        speechBubble.textContent = message;
+        speechBubble.style.opacity = "1";
+        speechBubble.style.color = "#4CAF50";
+        speechBubble.style.backgroundColor = "#E8F5E9";
+        
+        setTimeout(() => {
+            speechBubble.style.opacity = "0";
+            speechBubble.style.color = "";
+            speechBubble.style.backgroundColor = "";
+        }, 5000);
+    }
+}
+
 // 修改登录处理函数
 loginBtn.addEventListener('click', function() {
   const password = passwordInput.value;
-  let userRole = '';
+  const result = handleLogin(password);
   
-  if (password === ADMIN_PASSWORD) {
-    userRole = 'admin';
-    loginIdentity = 'master';
-  } else if (password === PUPPY_PASSWORD) {
-    userRole = 'puppy';
-    loginIdentity = 'puppy';
-  } else {
-    loginError.textContent = '密码错误！';
+  if (!result.success) {
+    loginError.textContent = result.message;
     return;
   }
-  
-  // 保存用户角色和登录身份
-  localStorage.setItem('userRole', userRole);
-  localStorage.setItem('loginIdentity', loginIdentity);
-  
-  // 隐藏登录界面
-  loginScreen.style.display = 'none';
   
   // 初始化按钮
   initializeButtons();
@@ -1391,60 +1411,15 @@ document.addEventListener('DOMContentLoaded', () => {
   if (loginBtn && passwordInput && loginScreen) {
     loginBtn.addEventListener('click', function() {
       const password = passwordInput.value;
+      const result = handleLogin(password);
       
-      if (password === ADMIN_PASSWORD) {
-        // 主人登录
-        localStorage.setItem('userRole', 'admin');
-        localStorage.setItem('isLoggedIn', 'true');
-        loginIdentity = 'master';
-        // 添加这一行：将登录身份保存到localStorage
-        localStorage.setItem('loginIdentity', loginIdentity);
-        loginScreen.style.display = 'none';
-        // 显示欢迎消息
-        if (speechBubble) {
-          speechBubble.textContent = "主人~欢迎回家！";
-          speechBubble.style.opacity = "1";
-          speechBubble.style.color = "#4CAF50"; // 绿色表示欢迎
-          speechBubble.style.backgroundColor = "#E8F5E9"; // 浅绿色背景
-          
-          setTimeout(() => {
-            speechBubble.style.opacity = "0";
-            speechBubble.style.color = ""; 
-            speechBubble.style.backgroundColor = "";
-          }, 5000);
-        }
-        // 保存数据到Firebase
-        saveScore();
-      } else if (password === PUPPY_PASSWORD) {
-        // 小狗登录
-        localStorage.setItem('userRole', 'puppy');
-        localStorage.setItem('isLoggedIn', 'true');
-        loginIdentity = 'puppy';
-        // 添加这一行：将登录身份保存到localStorage
-        localStorage.setItem('loginIdentity', loginIdentity);
-        loginScreen.style.display = 'none';
-        // 显示欢迎消息
-        if (speechBubble) {
-          speechBubble.textContent = "乐乐~欢迎回家！";
-          speechBubble.style.opacity = "1";
-          speechBubble.style.color = "#4CAF50"; // 绿色表示欢迎
-          speechBubble.style.backgroundColor = "#E8F5E9"; // 浅绿色背景
-          
-          setTimeout(() => {
-            speechBubble.style.opacity = "0";
-            speechBubble.style.color = ""; 
-            speechBubble.style.backgroundColor = "";
-          }, 5000);
-        }
-        // 保存数据到Firebase
-        saveScore();
-      } else {
-        // 密码错误
-        loginError.textContent = '密码错误，请重试';
+      if (!result.success) {
+        loginError.textContent = result.message;
         passwordInput.value = '';
         setTimeout(() => {
           loginError.textContent = '';
         }, 3000);
+        return;
       }
     });
     
