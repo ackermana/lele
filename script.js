@@ -458,16 +458,25 @@ function initCheckIn() {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays > 1) { // 如果不是昨天签到，即中断
-      if (score >= 10) { // 确保有足够分数扣除
-          score -= 10;
-          log.push({
-              time: Date.now(),
-              action: "中断签到扣分",
-              points: -30
-          });
-          showMessage("签到中断，扣除30分", 3000);
-      } else {
-          showMessage("签到中断，但分数不足以扣除", 3000);
+      // 检查是否已经因为这次中断扣过分
+      const breakKey = 'lastBreakPenalty';
+      const lastBreakPenalty = localStorage.getItem(breakKey);
+      const breakId = lastCheckInDate + '_to_' + todayFormatted; // 创建唯一标识这次中断的ID
+      
+      if (lastBreakPenalty !== breakId) { // 如果没有为这次特定的中断扣过分
+        if (score >= 10) { // 确保有足够分数扣除
+            score -= 10;
+            log.push({
+                time: Date.now(),
+                action: "中断签到扣分",
+                points: -30
+            });
+            showMessage("签到中断，扣除30分", 3000);
+            // 记录这次中断已经扣过分
+            localStorage.setItem(breakKey, breakId);
+        } else {
+            showMessage("签到中断，但分数不足以扣除", 3000);
+        }
       }
       consecutiveCheckInDays = 0;
       saveScore(); // 保存扣分和连续天数重置
