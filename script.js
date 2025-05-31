@@ -154,7 +154,15 @@ function loadAllData() {
       lastCheckInDate = data.lastCheckInDate || null;
       consecutiveCheckInDays = data.consecutiveCheckInDays || 0;
 
-      loginIdentity = data.loginIdentity || '';
+      // 从本地存储获取登录身份
+      const savedIdentity = localStorage.getItem('loginIdentity');
+      // 如果本地有保存的身份，优先使用本地的
+      if (savedIdentity) {
+        loginIdentity = savedIdentity;
+      } else {
+        // 否则才使用服务器上的值
+        loginIdentity = data.loginIdentity || '';
+      }
       
       // 处理每日点击奖励
       const clickRewardData = data.dailyClickReward;
