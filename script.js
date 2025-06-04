@@ -1377,10 +1377,11 @@ const rules = {
     {name: "亲亲", cost: 0},
     {name: "打电话", cost: 10},
     {name: "主人照片", cost: 10, desc: "主人主动发的也算"},
-    {name: '零食大礼包', cost: 30, desc: "主人给你买"},
+    {name: '小零食', cost: 10, desc: "主人给你买"},
     {name: "文字涩涩", cost: 50, desc: "数不清了"},
-    {name: "语音涩涩", cost: 80, desc: "每周不能超过两次！"},
-    {name: "神秘礼物", cost: 300, desc: "每次兑换加100"}
+    {name: "语音涩涩", cost: 80, desc: "每周不超过两次！"},
+    {name: "小礼物", cost: 200, desc: "每次兑换后加100"},
+    {name: "玩具", cost: 10000, desc: "玩具"}
   ]
 };
 
