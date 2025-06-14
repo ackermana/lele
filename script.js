@@ -1353,13 +1353,13 @@ const rules = {
   deductions: [
     {name: "没有早安晚安吻", points: 20, desc: "每天"},
     {name: "没有及时报备", points: 20},
-    {name: "睡前没有说爱主人", points: 20},
+    {name: "没有说爱主人", points: 20},
     {name: "敷衍主人", points: 30},
     {name: "自己偷偷生气", points: 40, desc: "罚"},
-    {name: "有误会不及时解决", points: 20, desc: "隔夜40分+罚"},
-    {name: "没有完成主人的任务", points: 20, desc: "说到不做到，最高40分"},
-    {name: "不完成主人的惩罚", points: 40, desc: "重罚！！最高80分"},
-    {name: "其他惹主人生气行为", points: 20, desc: "无上限"}
+    {name: "误会不及时解决", points: 20, desc: "隔夜40分+罚"},
+    {name: "没有完成任务", points: 20, desc: "说到不做到，最高40分"},
+    {name: "不完成惩罚", points: 40, desc: "重罚！！最高80分"},
+    {name: "其他", points: 20, desc: "无上限"}
   ],
   additions: [
     {name: "一天表现好", points: 5, desc: "上限30"},
@@ -1369,8 +1369,8 @@ const rules = {
     {name: "发视频", points: 5, desc: "每天上限40分"},
     {name: "一天黏主人", points: 5},
     {name: "涩涩后细说过程", points: 10},
-    {name: "超额完成主人任务", points: 5, desc: "+奖"},
-    {name: "其他让主人高兴行为", points: 5, desc: "无上限"}
+    {name: "超额完成任务", points: 5, desc: "+奖"},
+    {name: "其他", points: 5, desc: "无上限"}
   ],
   store: [
     {name: "抱抱", cost: 0},
