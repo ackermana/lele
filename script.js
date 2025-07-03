@@ -471,7 +471,12 @@ function initCheckIn() {
       const lastBreakPenalty = localStorage.getItem(breakKey);
       const breakId = lastCheckInDate + '_to_' + todayFormatted; // 创建唯一标识这次中断的ID
       
-      if (lastBreakPenalty !== breakId) { // 如果没有为这次特定的中断扣过分
+      // 添加一个标志，防止在同一会话中重复扣分
+      const sessionBreakKey = 'sessionBreakPenalty';
+      const sessionBreakPenalty = sessionStorage.getItem(sessionBreakKey);
+      
+      // 只有当本地存储和会话存储都没有记录这次中断时才扣分
+      if (lastBreakPenalty !== breakId && sessionBreakPenalty !== breakId) { // 如果没有为这次特定的中断扣过分
         if (score >= 10) { // 确保有足够分数扣除
             score -= 10;
             log.push({
@@ -480,14 +485,17 @@ function initCheckIn() {
                 points: -30
             });
             showMessage("签到中断，扣除30分", 3000);
-            // 记录这次中断已经扣过分
+            // 记录这次中断已经扣过分（同时在本地存储和会话存储中记录）
             localStorage.setItem(breakKey, breakId);
+            sessionStorage.setItem(sessionBreakKey, breakId);
         } else {
             showMessage("签到中断，但分数不足以扣除", 3000);
+            // 即使不扣分，也记录已处理过这次中断
+            sessionStorage.setItem(sessionBreakKey, breakId);
         }
+        saveScore(); // 保存扣分
       }
       consecutiveCheckInDays = 0;
-      saveScore(); // 保存扣分和连续天数重置
     } else if (diffDays === 0 && lastCheckInDate === todayFormatted) {
       // 今天已经签到过了 (diffDays === 0 意味着 lastCheckInDate 是今天)
       // 此处逻辑在 handleCheckIn 中处理，initCheckIn 主要处理隔天逻辑
@@ -1357,8 +1365,8 @@ const rules = {
     {name: "敷衍主人", points: 30},
     {name: "自己偷偷生气", points: 40, desc: "罚"},
     {name: "误会不及时解决", points: 20, desc: "隔夜40分+罚"},
-    {name: "没有完成任务", points: 20, desc: "说到不做到，最高40分"},
-    {name: "不完成惩罚", points: 40, desc: "重罚！！最高80分"},
+    {name: "没有完成任务", points: 20, desc: "最高40分"},
+    {name: "不完成惩罚", points: 40, desc: "重罚！最高80分"},
     {name: "其他", points: 20, desc: "无上限"}
   ],
   additions: [
@@ -1376,11 +1384,11 @@ const rules = {
     {name: "抱抱", cost: 0},
     {name: "亲亲", cost: 0},
     {name: "打电话", cost: 10},
-    {name: "主人照片", cost: 10, desc: "主人主动发的也算"},
+    {name: "主人照片", cost: 10, desc: "主人发的也算"},
     {name: '小零食', cost: 10, desc: "主人给你买"},
     {name: "文字涩涩", cost: 50, desc: "数不清了"},
     {name: "语音涩涩", cost: 80, desc: "每周不超过两次！"},
-    {name: "小礼物", cost: 200, desc: "每次兑换后加100"},
+    {name: "小礼物", cost: 200, desc: "兑换后加100"},
     {name: "玩具", cost: 10000, desc: "玩具"}
   ]
 };
