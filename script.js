@@ -518,7 +518,7 @@ function handleCheckIn() {
     return;
   }
 
-  let pointsEarned = 3;
+  let pointsEarned = 5;
   // 检查昨天是否签到，以正确增加连续签到天数
   if (lastCheckInDate) {
       const yesterday = new Date();
@@ -537,9 +537,9 @@ function handleCheckIn() {
 
 
   if (consecutiveCheckInDays >= 7) {
-    pointsEarned = 10;
+    pointsEarned = 15;
   } else if (consecutiveCheckInDays >= 3) {
-    pointsEarned = 5;
+    pointsEarned = 10;
   }
 
   score += pointsEarned;
@@ -1370,11 +1370,11 @@ const rules = {
     {name: "其他", points: 20, desc: "无上限"}
   ],
   additions: [
-    {name: "一天表现好", points: 5, desc: "上限30"},
-    {name: "及时报备", points: 5},
-    {name: "发语音", points: 2, desc: "每天上限20分"},
-    {name: "发照片", points: 5, desc: "每天上限30分"},
-    {name: "发视频", points: 5, desc: "每天上限40分"},
+    {name: "一天表现好", points: 10, desc: "上限30"},
+    {name: "及时报备", points: 10},
+    {name: "发语音", points: 20, desc: "每天上限20分"},
+    {name: "发照片", points: 20, desc: "每天上限40分"},
+    {name: "发视频", points: 20, desc: "每天上限40分"},
     {name: "一天黏主人", points: 5},
     {name: "涩涩后细说", points: 10},
     {name: "超额完成任务", points: 5, desc: "+奖"},
@@ -1389,7 +1389,7 @@ const rules = {
     {name: "文字涩涩", cost: 50, desc: "数不清了"},
     {name: "语音涩涩", cost: 80, desc: "每周不超过两次！"},
     {name: "小礼物", cost: 200, desc: "兑换后加100"},
-    {name: "玩具", cost: 10000, desc: "玩具"}
+    {name: "玩具", cost: 5000, desc: "玩具"}
   ]
 };
 
