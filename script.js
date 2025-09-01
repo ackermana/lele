@@ -21,6 +21,7 @@ let lastCheckInDate = null; // YYYY-MM-DD格式
 let consecutiveCheckInDays = 0;
 
 
+
 // 初始化Firebase应用
 let app;
 try {
@@ -465,7 +466,7 @@ function initCheckIn() {
     const diffTime = todayStart.getTime() - lastDateStart.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    if (diffDays > 1) { // 如果不是昨天签到，即中断
+    if (diffDays > 3) { // 超过3天才算中断
       // 检查是否已经因为这次中断扣过分
       const breakKey = 'lastBreakPenalty';
       const lastBreakPenalty = localStorage.getItem(breakKey);
@@ -484,18 +485,21 @@ function initCheckIn() {
                 action: "中断签到扣分",
                 points: -30
             });
-            showMessage("签到中断，扣除30分", 3000);
+            showMessage("签到中断超过3天，扣除30分", 3000);
             // 记录这次中断已经扣过分（同时在本地存储和会话存储中记录）
             localStorage.setItem(breakKey, breakId);
             sessionStorage.setItem(sessionBreakKey, breakId);
         } else {
-            showMessage("签到中断，但分数不足以扣除", 3000);
+            showMessage("签到中断超过3天，但分数不足以扣除", 3000);
             // 即使不扣分，也记录已处理过这次中断
             sessionStorage.setItem(sessionBreakKey, breakId);
         }
         saveScore(); // 保存扣分
       }
       consecutiveCheckInDays = 0;
+    } else if (diffDays > 1 && diffDays <= 3) { // 1-3天内续签，继续连续签到
+      // 不需要扣分，天数继续累计
+      showMessage(`签到中断${diffDays}天，可以继续签到`, 2000);
     } else if (diffDays === 0 && lastCheckInDate === todayFormatted) {
       // 今天已经签到过了 (diffDays === 0 意味着 lastCheckInDate 是今天)
       // 此处逻辑在 handleCheckIn 中处理，initCheckIn 主要处理隔天逻辑
@@ -519,16 +523,29 @@ function handleCheckIn() {
   }
 
   let pointsEarned = 5;
-  // 检查昨天是否签到，以正确增加连续签到天数
+  // 检查上次签到时间，以正确增加连续签到天数
   if (lastCheckInDate) {
+      const lastDate = new Date(lastCheckInDate);
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
-      if (getFormattedDate(yesterday) === lastCheckInDate) {
+      
+      const todayStart = new Date();
+      const lastDateStart = new Date(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate());
+      const diffTime = todayStart.getTime() - lastDateStart.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 1) {
+          // 连续签到
           consecutiveCheckInDays++;
+      } else if (diffDays > 1 && diffDays <= 3) {
+          // 1-3天内续签，继续累计（不重置）
+          consecutiveCheckInDays++;
+      } else if (diffDays > 3) {
+          // 超过3天中断，已重置为0，现在重新开始
+          consecutiveCheckInDays = 1;
       } else {
-          // 如果昨天没签到，但也不是更早（这种情况已在initCheckIn处理断签），则从1开始
-          // 如果lastCheckInDate不是昨天，说明是断签后首次签到，或首次签到
-          consecutiveCheckInDays = 1; 
+          // 首次签到或同一天
+          consecutiveCheckInDays = 1;
       }
   } else {
       // 首次签到
@@ -555,7 +572,22 @@ function handleCheckIn() {
   updateCheckInUI();
   updateDisplay(); // 更新总积分和日志显示
   showSpecialMessage(pointsEarned);
-  showMessage(`签到成功！获得 ${pointsEarned} 积分，已连续签到 ${consecutiveCheckInDays} 天。`, 3000);
+  let message = `签到成功！获得 ${pointsEarned} 积分，已连续签到 ${consecutiveCheckInDays} 天。`;
+  
+  // 检查是否是从中断中恢复
+  if (lastCheckInDate) {
+      const lastDate = new Date(lastCheckInDate);
+      const todayStart = new Date();
+      const lastDateStart = new Date(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate());
+      const diffTime = todayStart.getTime() - lastDateStart.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays > 1 && diffDays <= 3) {
+          message = `续签成功！获得 ${pointsEarned} 积分，已连续签到 ${consecutiveCheckInDays} 天。`;
+      }
+  }
+  
+  showMessage(message, 3000);
 }
 
 function updateCheckInUI() {
@@ -576,7 +608,24 @@ function updateCheckInUI() {
     checkInBtn.classList.add('add-btn');
     checkInBtn.classList.remove('store-btn');
   }
-  checkInStatusEl.textContent = `已连续签到 ${consecutiveCheckInDays} 天`;
+  let statusText = `已连续签到 ${consecutiveCheckInDays} 天`;
+  
+  // 如果有上次签到日期，检查中断情况
+  if (lastCheckInDate && lastCheckInDate !== todayFormatted) {
+      const lastDate = new Date(lastCheckInDate);
+      const todayStart = new Date();
+      const lastDateStart = new Date(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate());
+      const diffTime = todayStart.getTime() - lastDateStart.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays > 1 && diffDays <= 3) {
+          statusText = `中断${diffDays}天，可续签 (当前${consecutiveCheckInDays}天)`;
+      } else if (diffDays > 3) {
+          statusText = `签到已中断${diffDays}天，重新开始`;
+      }
+  }
+  
+  checkInStatusEl.textContent = statusText;
   
   // 更新面板高度
   const checkInPanel = document.getElementById('checkInPanel');
