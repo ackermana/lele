@@ -1825,9 +1825,15 @@ function displayDiaryEntries(entries) {
         card.style.borderRadius = '6px';
         card.style.background = '#fafafa';
 
-        const title = document.createElement('div');
-        title.style.fontWeight = 'bold';
-        title.textContent = entry.title || '无标题';
+        // 仅在标题非空时显示标题
+        if (entry.title && String(entry.title).trim()) {
+          const titleEl = document.createElement('div');
+          titleEl.className = 'diary-title';
+          titleEl.style.fontWeight = 'bold';
+          titleEl.style.fontSize = '1rem';
+          titleEl.textContent = String(entry.title).trim();
+          card.appendChild(titleEl);
+        }
 
         const meta = document.createElement('div');
         meta.style.fontSize = '0.8em';
@@ -1852,7 +1858,6 @@ function displayDiaryEntries(entries) {
           actions.appendChild(delBtn);
         }
 
-        card.appendChild(title);
         card.appendChild(meta);
         card.appendChild(content);
         card.appendChild(actions);
@@ -1860,8 +1865,8 @@ function displayDiaryEntries(entries) {
       });
   });
 
-  // 新增：滚动到最新消息（底部）
-  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  // 调整：最新在最上方，滚动定位顶部
+  messagesContainer.scrollTop = 0;
 }
 
 // 兼容旧接口：以下三个函数名保留，对接新日记实现
