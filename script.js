@@ -16,7 +16,7 @@ let dailyClickReward = 0; // 今日已获得的点击奖励
 const MAX_DAILY_CLICK_REWARD = 20; // 每日点击奖励上限
 let lastClickRewardDate = ''; // 上次获得点击奖励的日期
 let loginIdentity = ''; // 记录登录身份：'puppy' 或 'master'
-let chatMessages = []; // 存储聊天消息
+ let diaryEntries = []; // 存储日记条目：[{id, title, content, date(YYYY-MM-DD), author, timestamp}]
 let lastCheckInDate = null; // YYYY-MM-DD格式
 let consecutiveCheckInDays = 0;
 
@@ -108,8 +108,8 @@ function loadAllData() {
         wishes = data.wishes || [];
         // 添加这一行：从缓存中恢复登录身份
         loginIdentity = data.loginIdentity || '';
-        // 从缓存加载留言数据
-        chatMessages = data.chatMessages || [];
+        // 从缓存加载日记数据（兼容旧留言数据）
+        diaryEntries = normalizeDiaryEntries(data.diaryEntries || data.chatMessages || []);
         // 新增：从缓存加载签到数据
         lastCheckInDate = data.lastCheckInDate || null;
         consecutiveCheckInDays = data.consecutiveCheckInDays || 0;
@@ -119,7 +119,7 @@ function loadAllData() {
         updateDaysDisplay();
         renderDailyTasks();
         renderWishes();
-        displayMessages(chatMessages); // Updated function call
+        displayDiaryEntries(diaryEntries);
         initCheckIn(); // 新增：初始化签到状态
 
         // 隐藏加载指示器
@@ -150,7 +150,8 @@ function loadAllData() {
       accompanyDays = data.accompanyDays || 51;
       dailyTasks = data.dailyTasks || [];
       wishes = data.wishes || [];
-      chatMessages = data.chatMessages || [];
+      // 加载日记数据（兼容旧留言数据）
+      diaryEntries = normalizeDiaryEntries(data.diaryEntries || data.chatMessages || []);
       // 新增：加载签到数据
       lastCheckInDate = data.lastCheckInDate || null;
       consecutiveCheckInDays = data.consecutiveCheckInDays || 0;
@@ -193,12 +194,11 @@ function loadAllData() {
       
       renderWishes();
       initCheckIn(); // 新增：初始化签到状态
-      
-      // 添加错误处理，防止聊天功能影响其他功能
+      // 渲染日记
       try {
-        displayMessages(chatMessages); // Updated function call
+        displayDiaryEntries(diaryEntries);
       } catch (error) {
-        console.error("渲染留言板消息时出错:", error);
+        console.error("渲染日记时出错:", error);
       }
       
       // 缓存数据到本地存储
@@ -209,7 +209,7 @@ function loadAllData() {
           accompanyDays,
           dailyTasks,
           wishes,
-          chatMessages,
+          diaryEntries,
           loginIdentity,
           // 新增：缓存签到数据
           lastCheckInDate,
@@ -466,40 +466,10 @@ function initCheckIn() {
     const diffTime = todayStart.getTime() - lastDateStart.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    if (diffDays > 3) { // 超过3天才算中断
-      // 检查是否已经因为这次中断扣过分
-      const breakKey = 'lastBreakPenalty';
-      const lastBreakPenalty = localStorage.getItem(breakKey);
-      const breakId = lastCheckInDate + '_to_' + todayFormatted; // 创建唯一标识这次中断的ID
-      
-      // 添加一个标志，防止在同一会话中重复扣分
-      const sessionBreakKey = 'sessionBreakPenalty';
-      const sessionBreakPenalty = sessionStorage.getItem(sessionBreakKey);
-      
-      // 只有当本地存储和会话存储都没有记录这次中断时才扣分
-      if (lastBreakPenalty !== breakId && sessionBreakPenalty !== breakId) { // 如果没有为这次特定的中断扣过分
-        if (score >= 10) { // 确保有足够分数扣除
-            score -= 10;
-            log.push({
-                time: Date.now(),
-                action: "中断签到扣分",
-                points: -30
-            });
-            showMessage("签到中断超过3天，扣除30分", 3000);
-            // 记录这次中断已经扣过分（同时在本地存储和会话存储中记录）
-            localStorage.setItem(breakKey, breakId);
-            sessionStorage.setItem(sessionBreakKey, breakId);
-        } else {
-            showMessage("签到中断超过3天，但分数不足以扣除", 3000);
-            // 即使不扣分，也记录已处理过这次中断
-            sessionStorage.setItem(sessionBreakKey, breakId);
-        }
-        saveScore(); // 保存扣分
-      }
+    if (diffDays > 3) { // 超过3天视为断开，但不扣分
       consecutiveCheckInDays = 0;
-    } else if (diffDays > 1 && diffDays <= 3) { // 1-3天内续签，继续连续签到
-      // 不需要扣分，天数继续累计
-      showMessage(`签到中断${diffDays}天，可以继续签到`, 2000);
+    } else if (diffDays > 1 && diffDays <= 3) { // 1-3天内续签，继续连续签到（不提示中断信息）
+      // 保持当前连续天数，不做额外处理
     } else if (diffDays === 0 && lastCheckInDate === todayFormatted) {
       // 今天已经签到过了 (diffDays === 0 意味着 lastCheckInDate 是今天)
       // 此处逻辑在 handleCheckIn 中处理，initCheckIn 主要处理隔天逻辑
@@ -523,6 +493,7 @@ function handleCheckIn() {
   }
 
   let pointsEarned = 5;
+  let resumedWithinGrace = false; // 是否为1-3天内续签
   // 检查上次签到时间，以正确增加连续签到天数
   if (lastCheckInDate) {
       const lastDate = new Date(lastCheckInDate);
@@ -540,6 +511,7 @@ function handleCheckIn() {
       } else if (diffDays > 1 && diffDays <= 3) {
           // 1-3天内续签，继续累计（不重置）
           consecutiveCheckInDays++;
+          resumedWithinGrace = true;
       } else if (diffDays > 3) {
           // 超过3天中断，已重置为0，现在重新开始
           consecutiveCheckInDays = 1;
@@ -572,21 +544,9 @@ function handleCheckIn() {
   updateCheckInUI();
   updateDisplay(); // 更新总积分和日志显示
   showSpecialMessage(pointsEarned);
-  let message = `签到成功！获得 ${pointsEarned} 积分，已连续签到 ${consecutiveCheckInDays} 天。`;
-  
-  // 检查是否是从中断中恢复
-  if (lastCheckInDate) {
-      const lastDate = new Date(lastCheckInDate);
-      const todayStart = new Date();
-      const lastDateStart = new Date(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate());
-      const diffTime = todayStart.getTime() - lastDateStart.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
-      if (diffDays > 1 && diffDays <= 3) {
-          message = `续签成功！获得 ${pointsEarned} 积分，已连续签到 ${consecutiveCheckInDays} 天。`;
-      }
-  }
-  
+  const message = resumedWithinGrace
+    ? `续签成功！获得 ${pointsEarned} 积分，已连续签到 ${consecutiveCheckInDays} 天。`
+    : `签到成功！获得 ${pointsEarned} 积分，已连续签到 ${consecutiveCheckInDays} 天。`;
   showMessage(message, 3000);
 }
 
@@ -608,24 +568,8 @@ function updateCheckInUI() {
     checkInBtn.classList.add('add-btn');
     checkInBtn.classList.remove('store-btn');
   }
-  let statusText = `已连续签到 ${consecutiveCheckInDays} 天`;
-  
-  // 如果有上次签到日期，检查中断情况
-  if (lastCheckInDate && lastCheckInDate !== todayFormatted) {
-      const lastDate = new Date(lastCheckInDate);
-      const todayStart = new Date();
-      const lastDateStart = new Date(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate());
-      const diffTime = todayStart.getTime() - lastDateStart.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
-      if (diffDays > 1 && diffDays <= 3) {
-          statusText = `中断${diffDays}天，可续签 (当前${consecutiveCheckInDays}天)`;
-      } else if (diffDays > 3) {
-          statusText = `签到已中断${diffDays}天，重新开始`;
-      }
-  }
-  
-  checkInStatusEl.textContent = statusText;
+  // 仅显示连续签到天数
+  checkInStatusEl.textContent = `已连续签到 ${consecutiveCheckInDays} 天`;
   
   // 更新面板高度
   const checkInPanel = document.getElementById('checkInPanel');
@@ -1046,6 +990,11 @@ function updatePuppyState(points) {
 }
 
 // ==================== 事件处理函数 ====================
+// 开关：是否启用对小狗用户的加/减分限制（true=限制，默认关闭）
+function isPuppyRestrictionEnabled() {
+  const v = localStorage.getItem('puppyRestrictionEnabled');
+  return v === 'true';
+}
 function createButton(type, item) {
   const btn = document.createElement('button');
   btn.className = `btn ${type}-btn`;
@@ -1087,9 +1036,9 @@ function createButton(type, item) {
   btn.appendChild(textSpan);
   btn.appendChild(pointsSpan);
   
-  // 检查用户角色，如果是小狗登录且不是每日任务相关按钮，则禁用按钮
+  // 检查用户角色：若为小狗且开启限制，并且为加/减分按钮，则禁用（默认允许）
   const isPuppy = localStorage.getItem('userRole') === 'puppy';
-  if (isPuppy && (type === 'add' || type === 'deduct')) {
+  if (isPuppy && isPuppyRestrictionEnabled() && (type === 'add' || type === 'deduct')) {
     btn.disabled = true;
     btn.style.opacity = '0.5';
     btn.style.cursor = 'not-allowed';
@@ -1189,9 +1138,17 @@ function initializeButtons() {
     initializeAdditions();
     initializeStore();
   } else if (userRole === 'puppy') {
-    // 小狗只能看到按钮但不能点击
-    initializeDeductionsForPuppy();
-    initializeAdditionsForPuppy();
+    // 根据限制开关决定小狗是否可点击加/减分按钮
+    if (isPuppyRestrictionEnabled()) {
+      // 启用限制：加/减分只读
+      initializeDeductionsForPuppy();
+      initializeAdditionsForPuppy();
+    } else {
+      // 关闭限制：允许小狗点击加/减分
+      initializeDeductions();
+      initializeAdditions();
+    }
+    // 商店保持小狗不可自行使用
     initializeStoreForPuppy();
   }
 }
@@ -1770,101 +1727,177 @@ function renderWishes() {
   });
 }
 
-// 留言板功能相关函数
-// 新增：保存留言板消息函数
-function saveMessages() {
-  saveData('lele/chatMessages', chatMessages); // 沿用 chatMessages 变量名，但数据结构可能需要调整
+// 日记功能相关函数
+// 兼容：归一化留言/日记数据结构
+function normalizeDiaryEntries(list) {
+  if (!Array.isArray(list)) return [];
+  return list.map(item => {
+    // 旧数据是 {sender, text, timestamp}
+    const ts = item.timestamp || Date.now();
+    const date = (item.date) ? item.date : new Date(ts).toISOString().slice(0,10);
+    return {
+      id: item.id || String(ts),
+      title: item.title || '',
+      content: item.content || item.text || '',
+      date,
+      author: item.author || item.sender || loginIdentity || 'puppy',
+      timestamp: ts
+    };
+  });
 }
 
-// 新增：添加留言函数
-function addMessage(sender, messageText) {
-  const newMessage = {
-    id: Date.now().toString(), // 使用时间戳作为唯一ID
-    sender: sender,
-    text: messageText,
-    timestamp: Date.now()
+// 保存日记
+function saveDiaryEntries() {
+  saveData('lele/diaryEntries', diaryEntries);
+}
+
+// 添加日记
+function addDiaryEntry({ title = '', content = '', date = null, author = '' }) {
+  const now = Date.now();
+  const entry = {
+    id: String(now),
+    title: title.trim(),
+    content: content.trim(),
+    date: date || new Date(now).toISOString().slice(0,10),
+    author: author || loginIdentity || 'puppy',
+    timestamp: now
   };
-  chatMessages.push(newMessage);
-  saveMessages(); // 保存到Firebase (使用新的保存函数)
-  displayMessages(chatMessages); // Updated function call // 立即更新显示
+  if (!entry.content) {
+    showMessage('内容不能为空哦~');
+    return;
+  }
+  diaryEntries.push(entry);
+  // 按时间倒序排序（日期+时间）
+  diaryEntries.sort((a,b) => (b.date.localeCompare(a.date) || b.timestamp - a.timestamp));
+  saveDiaryEntries();
+  displayDiaryEntries(diaryEntries);
 }
 
-// 新增：渲染留言板消息函数
-function displayMessages(messages) { // Changed name and added parameter
+// 删除日记（仅管理员）
+function deleteDiaryEntry(id) {
+  const userRole = localStorage.getItem('userRole');
+  if (userRole !== 'admin') {
+    showMessage('只有主人可以删除日记哦~');
+    return;
+  }
+  diaryEntries = diaryEntries.filter(e => e.id !== id);
+  saveDiaryEntries();
+  displayDiaryEntries(diaryEntries);
+}
+
+// 渲染日记列表
+function displayDiaryEntries(entries) {
   const messagesContainer = document.getElementById('chatMessages'); // 沿用 chatMessages ID
   if (!messagesContainer) {
-    console.warn('Messages container not found.'); // Added console.warn from plan
+    console.warn('Diary container not found.');
     return;
   }
 
   messagesContainer.innerHTML = ''; // 清空现有消息
 
-  // 遍历消息数组，从旧到新添加，使最新消息在底部
-  // Removed reverse()
-  if (messages.length === 0) { // Keep empty state message
-    messagesContainer.innerHTML = '<div style="text-align:center; padding: 10px; color: #999;">暂无留言</div>';
+  if (entries.length === 0) {
+    messagesContainer.innerHTML = '<div style="text-align:center; padding: 10px; color: #999;">暂无日记</div>';
     return;
   }
 
-  messages.forEach(message => { // Iterate directly over messages
-    const messageElement = document.createElement('div');
-    messageElement.classList.add('message'); // Changed class name and method
-    messageElement.style.marginBottom = '10px'; // Kept this style
+  // 按日期倒序分组显示
+  const byDate = entries.reduce((acc, e) => {
+    acc[e.date] = acc[e.date] || [];
+    acc[e.date].push(e);
+    return acc;
+  }, {});
 
-    // Removed borderBottom style
+  const dates = Object.keys(byDate).sort((a,b) => b.localeCompare(a));
+  dates.forEach(date => {
+    const dateHeader = document.createElement('div');
+    dateHeader.style.margin = '10px 0 6px';
+    dateHeader.style.fontWeight = 'bold';
+    dateHeader.textContent = date;
+    messagesContainer.appendChild(dateHeader);
 
-    // 根据发送者添加不同的类
-    if (message.sender === 'master') {
-      messageElement.classList.add('message-master');
-    } else if (message.sender === 'puppy') {
-      messageElement.classList.add('message-puppy');
-    }
+    byDate[date]
+      .sort((a,b) => b.timestamp - a.timestamp)
+      .forEach(entry => {
+        const card = document.createElement('div');
+        card.classList.add('message');
+        card.style.marginBottom = '10px';
+        card.style.padding = '8px';
+        card.style.borderRadius = '6px';
+        card.style.background = '#fafafa';
 
-    const senderElement = document.createElement('div');
-    senderElement.style.fontWeight = 'bold';
-    senderElement.textContent = message.sender === 'master' ? '主人' : '乐乐';
+        const title = document.createElement('div');
+        title.style.fontWeight = 'bold';
+        title.textContent = entry.title || '无标题';
 
-    const textElement = document.createElement('div');
-    textElement.textContent = message.text;
-    textElement.style.marginTop = '5px';
+        const meta = document.createElement('div');
+        meta.style.fontSize = '0.8em';
+        meta.style.color = '#666';
+        const authorLabel = entry.author === 'master' ? '主人' : '乐乐';
+        meta.textContent = `${authorLabel} · ${new Date(entry.timestamp).toLocaleTimeString()}`;
 
-    const timeElement = document.createElement('div');
-    timeElement.style.fontSize = '0.8em';
-    timeElement.style.color = '#666';
-    timeElement.style.textAlign = 'right';
-    timeElement.textContent = new Date(message.timestamp).toLocaleString(); // 显示完整时间
+        const content = document.createElement('div');
+        content.style.marginTop = '6px';
+        content.textContent = entry.content;
 
-    messageElement.appendChild(senderElement);
-    messageElement.appendChild(textElement);
-    messageElement.appendChild(timeElement);
+        const actions = document.createElement('div');
+        actions.style.textAlign = 'right';
+        actions.style.marginTop = '6px';
+        const userRole = localStorage.getItem('userRole');
+        if (userRole === 'admin') {
+          const delBtn = document.createElement('button');
+          delBtn.className = 'btn deduct-btn';
+          delBtn.textContent = '删除';
+          delBtn.style.padding = '4px 8px';
+          delBtn.onclick = () => deleteDiaryEntry(entry.id);
+          actions.appendChild(delBtn);
+        }
 
-    messagesContainer.appendChild(messageElement);
+        card.appendChild(title);
+        card.appendChild(meta);
+        card.appendChild(content);
+        card.appendChild(actions);
+        messagesContainer.appendChild(card);
+      });
   });
 
   // 新增：滚动到最新消息（底部）
   messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
 
-// 新增：初始化留言板函数
+// 兼容旧接口：以下三个函数名保留，对接新日记实现
+function saveMessages() { saveDiaryEntries(); }
+function addMessage(sender, messageText) {
+  addDiaryEntry({ title: '', content: messageText, author: sender });
+}
+function displayMessages(messages) { displayDiaryEntries(normalizeDiaryEntries(messages || diaryEntries)); }
+
+// 初始化日记面板
 function initMessageBoard() {
   // 检查元素是否存在
   const messagePanel = document.getElementById('chatPanel'); // 沿用 chatPanel ID
-  const messageInput = document.getElementById('chatInput'); // 沿用 chatInput ID
-  const sendButton = document.getElementById('sendChatButton'); // 沿用 sendChatButton ID
+  const messageInput = document.getElementById('chatInput'); // 作为日记内容
+  const sendButton = document.getElementById('sendChatButton'); // 改为保存日记
+  const diaryTitleInput = document.getElementById('diaryTitle');
   const messagesContainer = document.getElementById('chatMessages'); // 沿用 chatMessages ID
 
   // 如果元素不存在，则提前返回
   if (!messagePanel || !messageInput || !sendButton || !messagesContainer) {
-    console.warn('留言板元素未找到，跳过初始化');
+    console.warn('日记面板元素未找到，跳过初始化');
     return;
   }
 
   // 发送按钮点击事件
   sendButton.addEventListener('click', () => {
-    if (messageInput.value.trim() !== '') {
-      addMessage(loginIdentity, messageInput.value); // 调用新的添加留言函数
-      messageInput.value = '';
+    const content = messageInput.value.trim();
+    const title = diaryTitleInput ? diaryTitleInput.value.trim() : '';
+    if (!content) {
+      showMessage('内容不能为空哦~');
+      return;
     }
+    // 不再手动选择日期，按保存时的时间自动记录
+    addDiaryEntry({ title, content, author: loginIdentity });
+    messageInput.value = '';
+    if (diaryTitleInput) diaryTitleInput.value = '';
   });
 
   // 输入框回车事件
@@ -1876,7 +1909,7 @@ function initMessageBoard() {
   });
 
   // 初始渲染留言
-  displayMessages(chatMessages); // Updated function call
+  displayDiaryEntries(diaryEntries);
 }
 
 // 确保登录后设置正确的身份

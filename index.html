@@ -532,24 +532,23 @@
         </div>
     
 
-        <!-- 聊天面板 --> 
+        <!-- 日记面板 --> 
         <div class="card chat-card"> 
             <div class="accordion" onclick="window.togglePanel('chatPanel')"> 
-                <h2>💬 留言板</h2> 
+                <h2>📔 日记</h2> 
                 <i class="fas fa-chevron-down"></i> 
             </div> 
             <div id="chatPanel" class="panel"> 
                 <div class="chat-container"> 
-                    <div class="chat-messages" id="chatMessages"> 
-                        <!-- 聊天消息将在这里动态生成 --> 
-                    </div> 
+                    <div class="chat-messages" id="chatMessages"></div> 
                     <div class="chat-input-container"> 
-                        <textarea id="chatInput" placeholder="输入消息..."></textarea> 
-                        <button id="sendChatButton">发送</button> 
+                        <input id="diaryTitle" placeholder="标题（可选）" style="width:100%;margin-bottom:6px;padding:8px;box-sizing:border-box;" />
+                        <textarea id="chatInput" placeholder="写点今天的想法..." style="min-height:80px"></textarea> 
+                        <button id="sendChatButton">保存日记</button> 
                     </div> 
                 </div> 
                 <div class="note"> 
-                    在这里可以留言~<br>  
+                    记录每天的心情与点滴~<br>  
                 </div> 
             </div> 
         </div>
