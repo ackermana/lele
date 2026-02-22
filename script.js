@@ -1882,7 +1882,7 @@ function initMessageBoard() {
   const messagePanel = document.getElementById('chatPanel'); // 沿用 chatPanel ID
   const messageInput = document.getElementById('chatInput'); // 作为日记内容
   const sendButton = document.getElementById('sendChatButton'); // 改为保存日记
-  const diaryTitleInput = document.getElementById('diaryTitle');
+  // const diaryTitleInput = document.getElementById('diaryTitle'); // 已移除标题输入
   const messagesContainer = document.getElementById('chatMessages'); // 沿用 chatMessages ID
 
   // 如果元素不存在，则提前返回
@@ -1894,7 +1894,8 @@ function initMessageBoard() {
   // 发送按钮点击事件
   sendButton.addEventListener('click', () => {
     const content = messageInput.value.trim();
-    const title = diaryTitleInput ? diaryTitleInput.value.trim() : '';
+    // const title = diaryTitleInput ? diaryTitleInput.value.trim() : '';
+    const title = ''; // 默认为空标题
     if (!content) {
       showMessage('内容不能为空哦~');
       return;
@@ -1902,7 +1903,7 @@ function initMessageBoard() {
     // 不再手动选择日期，按保存时的时间自动记录
     addDiaryEntry({ title, content, author: loginIdentity });
     messageInput.value = '';
-    if (diaryTitleInput) diaryTitleInput.value = '';
+    // if (diaryTitleInput) diaryTitleInput.value = '';
   });
 
   // 输入框回车事件

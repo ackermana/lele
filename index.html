@@ -542,8 +542,7 @@
                 <div class="chat-container"> 
                     <div class="chat-messages" id="chatMessages"></div> 
                     <div class="chat-input-container"> 
-                        <input id="diaryTitle" placeholder="标题（可选）" style="width:100%;margin-bottom:6px;padding:8px;box-sizing:border-box;" />
-                        <textarea id="chatInput" placeholder="写点今天的想法..." style="min-height:80px"></textarea> 
+                        <textarea id="chatInput" placeholder="写点今天的想法..."></textarea> 
                         <button id="sendChatButton">保存日记</button> 
                     </div> 
                 </div> 
@@ -693,27 +692,32 @@
 
         .chat-input-container {
             display: flex;
+            flex-direction: column;
             margin-top: 10px;
         }
 
         #chatInput {
-            flex: 1;
-            padding: 8px;
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
             border: 1px solid #ddd;
-            border-radius: 4px;
-            resize: none;
-            height: 40px;
+            border-radius: 8px;
+            resize: vertical;
+            min-height: 100px;
             font-size: 16px;
+            font-family: inherit;
+            margin-bottom: 10px;
         }
 
         #sendChatButton {
-            margin-left: 8px;
-            padding: 8px 16px;
+            width: 100%;
+            padding: 10px;
             background-color: var(--primary);
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
+            justify-content: center;
         }
 
         #sendChatButton:hover {
